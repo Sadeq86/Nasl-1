@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-mongoose.connect("mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority", {
+mongoose.connect("mongodb+srv://Aluxit:SadeqHosseini1387@aluxit.f5xgdpv.mongodb.net/?appName=Aluxit", {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
