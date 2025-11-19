@@ -111,7 +111,7 @@ module.exports = {
         .setDescription(descriptionMessage.content)
         .setColor(color)
         .setTimestamp()
-        .setFooter({ text: 'Lanya Ticket System' });
+        .setFooter({ text: 'Aluxit Ticket System' });
 
       let components = [];
 
