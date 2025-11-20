@@ -1,10 +1,8 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
-module.exports = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log(global.styles.infoColor('✅ Connected to MongoDB'));
-  } catch (error) {
-    console.error('❌ Failed to connect to MongoDB:', error);
-  }
-};
+const mongoose = require("mongoose");
+
+mongoose.connect("mongodb+srv://Aluxit:SadeqHosseini1387@aluxit.f5xgdpv.mongodb.net/?appName=Aluxit", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log("Mongo Connected"))
+.catch(err => console.log(err));
