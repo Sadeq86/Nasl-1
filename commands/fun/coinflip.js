@@ -2,16 +2,16 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('coinflip')
-    .setDescription('Flips a coin and shows the result.'),
+    .setName('start')
+    .setDescription('Spin a wheel and see the result.'),
 
   async execute(interaction) {
-    const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
+    const result = Math.random() < 0.5 ? '🎰 Random' : '🫳 Picking';
 
     const embed = new EmbedBuilder()
       .setColor(0x5865f2)
-      .setTitle('🪙 Coin Flip')
-      .setDescription(`You flipped a coin!`)
+      .setTitle('🎲 Picker Wheel')
+      .setDescription(`You spin the wheel.`)
       .addFields(
         { name: 'Result', value: result, inline: true },
         {
