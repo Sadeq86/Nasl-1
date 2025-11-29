@@ -1,8 +1,9 @@
 {
   "interval": 30000,
   "status": {
-    "type": "PLAYING",
-    "state": "With Nasl 1 Family",
-    "url": ""
+    "type": "Stereaming",
+    "state": "{serverCount} In Nasl-1",
+    "backup_state": "",
+    "url": "https://discord.gg/yzdJ5k9U"
   }
 }
