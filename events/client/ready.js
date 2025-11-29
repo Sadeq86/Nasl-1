@@ -1,9 +1,26 @@
-const { Events } = require('discord.js');
+const { Events, ActivityType } = require('discord.js');
 const startGiveawayScheduler = require('../../functions/giveawayScheduler');
 const serverStatusUpdater = require('../../functions/serverStatusUpdater');
 const updateStatus = require('../../functions/statusRotation');
 const fs = require('fs');
 const path = require('path');
+
+// Load status.json
+const statusFilePath = path.join(__dirname, '../../status.json');
+let statuses = [];
+
+if (fs.existsSync(statusFilePath)) {
+  try {
+    statuses = JSON.parse(fs.readFileSync(statusFilePath, 'utf-8'));
+    console.log(`Loaded ${statuses.length} status entries from status.json`);
+  } catch (err) {
+    console.error('Failed to parse status.json, using fallback:', err.message);
+    statuses = [{ name: 'Nasl 1', type: 'Playing' }];
+  }
+} else {
+  console.warn('status.json not found, using default status');
+  statuses = [{ name: 'Nasl 1 • Next Gen Bot', type: 'Playing' }];
+}
 
 module.exports = {
   name: Events.ClientReady,
@@ -12,7 +29,7 @@ module.exports = {
     // Start schedulers
     startGiveawayScheduler(client);
     serverStatusUpdater(client);
-    updateStatus(client);
+    updateStatus(client); 
 
     // Lavalink initialization
     client.lavalink.init({ id: client.user.id });
@@ -33,7 +50,6 @@ module.exports = {
 
     // Fancy console log
     const divider = '═'.repeat(64);
-
     console.log(`\n${' '.repeat(22)}Nasl 1\n`);
     console.log(divider);
     console.log(` Bot User       : ${client.user.tag}`.padEnd(60));
@@ -49,5 +65,31 @@ module.exports = {
     console.log(divider);
     console.log(`\n${' '.repeat(14)}Nasl 1 is now fully online and ready!\n`);
     console.log(`${divider}\n`);
+
+    // ———————— Dynamic Status from status.json ————————
+    let index = 0;
+
+    const setDynamicStatus = () => {
+      const totalMembers = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
+      const serverCount = client.guilds.cache.size;
+
+      const status = statuses[index % statuses.length];
+      index++;
+
+      let name = status.name
+        .replace('{members}', totalMembers.toLocaleString())
+        .replace('{servers}', serverCount.toLocaleString());
+
+      client.user.setActivity(name, {
+        type: ActivityType[status.type] || ActivityType.Playing,
+        url: status.url || undefined
+      });
+    };
+
+    // Set status immediately
+    setDynamicStatus();
+
+    // Update every 25 seconds
+    setInterval(setDynamicStatus, 25_000);
   },
 };
