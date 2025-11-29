@@ -1,43 +1,34 @@
 const fs = require('fs');
 const path = require('path');
+
 module.exports = (client) => {
   client.commands = new Map();
-
   const commandsPath = path.join(__dirname, '../commands');
-  fs.readdirSync(commandsPath).forEach((category) => {
+  const commandCategories = fs.readdirSync(commandsPath);
+
+  for (const category of commandCategories) {
     const categoryPath = path.join(commandsPath, category);
-    const commandFiles = fs
-      .readdirSync(categoryPath)
-      .filter((file) => file.endsWith('.js'));
+    if (!fs.statSync(categoryPath).isDirectory()) continue;
+
+    const commandFiles = fs.readdirSync(categoryPath).filter(file => file.endsWith('.js'));
 
     for (const file of commandFiles) {
-      const command = require(path.join(categoryPath, file));
+      const filePath = path.join(categoryPath, file);
+      try {
+        delete require.cache[require.resolve(filePath)];
+        const command = require(filePath);
 
-      client.commands.set(command.data.name, { ...command, category });
+      
+        if (!command || !command.data || typeof command.data.name !== 'string') {
+          console.error(`[Command] Invalid command in ${file} (${category}): Missing 'data' or 'data.name'`);
+          continue;
+        }
+
+        client.commands.set(command.data.name, { ...command, category });
+        console.log(`[Command] Loaded: ${command.data.name} (${category})`);
+      } catch (error) {
+        console.error(`[Command] Failed to load ${file} (${category}):`, error.message);
+      }
     }
-  });
-  let commandCount = 0;
-  let categoryCount = 0;
-
-  const categories = fs.readdirSync(commandsPath);
-  categoryCount = categories.length;
-
-  categories.forEach((category) => {
-    const categoryPath = path.join(commandsPath, category);
-    const commandFiles = fs
-      .readdirSync(categoryPath)
-      .filter((file) => file.endsWith('.js'));
-
-    for (const file of commandFiles) {
-      const command = require(path.join(categoryPath, file));
-      client.commands.set(command.data.name, { ...command, category });
-      commandCount++;
-    }
-  });
-
-  console.log(
-    global.styles.successColor(
-      `✅ Loaded ${commandCount} commands across ${categoryCount} categories.`
-    )
-  );
+  }
 };
