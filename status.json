@@ -1,9 +1,11 @@
-{
-  "interval": 30000,
-  "status": {
-    "type": "Stereaming",
-    "state": "{serverCount} In Nasl-1",
-    "backup_state": "",
-    "url": "https://discord.gg/yzdJ5k9U"
-  }
-}
+[
+  {
+    "name": "{members} In Nasl 1",
+    "type": "Streaming",
+    "url": "https://discord.gg/63qdN92d7r"
+  },
+  {
+    "name": "With Nasl 1 Family",
+    "type": "Playing"
+  },
+  {
