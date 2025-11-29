@@ -10,7 +10,7 @@ module.exports = {
     const connection = interaction.guild.members.me.voice;
 
     if (!connection.channelId) {
-      return interaction.reply({ content: 'I'm not in any voice channel!', ephemeral: true });
+      return interaction.reply({ content: 'Im not in any voice channel!', ephemeral: true });
     }
 
     try {
