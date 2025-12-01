@@ -1,50 +1,41 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
+const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('join')
-    .setDescription('Join a voice channel and stay 24/7')
-    .addChannelOption(option =>
-      option
-        .setName('channel')
-        .setDescription('The voice channel to join')
-        .setRequired(true)
-        .addChannelTypes(2) 
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.Connect),
+    .setDescription('Nasl-1 Will join a fixed voice channel.'),
 
   async execute(interaction) {
-    const channel = interaction.options.getChannel('channel');
+    await interaction.deferReply();
 
-    if (!channel.isVoiceBased()) {
-      return interaction.reply({ content: 'Please select a valid voice channel!', ephemeral: true });
+    
+    const FIXED_CHANNEL_ID = '1441136897836453963'; 
+
+    const channel = interaction.guild.channels.cache.get(FIXED_CHANNEL_ID);
+
+    if (!channel || channel.type !== 2) {
+      return interaction.editReply({ content: 'Channel Not Found.' });
     }
 
-    if (interaction.guild.members.me.voice.channelId) {
-      return interaction.reply({ content: `I'm already in a voice channel!`, ephemeral: true });
+    
+    if (!channel.permissionsFor(interaction.guild.members.me).has(['Connect', 'Speak'])) {
+      return interaction.editReply({ content: 'I dont have access to join this channel.' });
     }
 
-    try {
-      const connection = await channel.joinVoiceChannel({
-        channelId: channel.id,
-        guildId: interaction.guild.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-        selfDeaf: true,   
-        selfMute: false,  
-      });
+    
+    const oldConnection = getVoiceConnection(interaction.guild.id);
+    if (oldConnection) oldConnection.destroy();
 
-      
-      connection.on('stateChange', (oldState, newState) => {
-        if (newState.status === 'disconnected') {
-         
-          setTimeout(() => channel.joinVoiceChannel({ ...connection.joinConfig }), 5000);
-        }
-      });
+    
+    joinVoiceChannel({
+      channelId: channel.id,
+      guildId: interaction.guild.id,
+      adapterCreator: interaction.guild.voiceAdapterCreator,
+      selfDeaf: true,
+      selfMute: false,
+    });
 
-      await interaction.reply({ content: `Joined ${channel} and staying 24/7!`, ephemeral: false });
-    } catch (error) {
-      console.error('Join error:', error);
-      await interaction.reply({ content: 'Failed to join the voice channel.', ephemeral: true });
-    }
+    await interaction.editReply({ content: ` ${channel} I joined.` });
   },
 };
