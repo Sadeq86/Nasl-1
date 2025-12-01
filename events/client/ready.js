@@ -70,21 +70,33 @@ module.exports = {
     let index = 0;
 
     const setDynamicStatus = () => {
-      const totalMembers = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
-      const serverCount = client.guilds.cache.size;
+      try {
+        const totalMembers = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
+        const serverCount = client.guilds.cache.size;
 
-      const status = statuses[index % statuses.length];
-      index++;
+        const status = statuses[index % statuses.length];
+        if (!status || !status.name) return; 
 
-      let name = status.name
-        .replace('{members}', totalMembers.toLocaleString())
-        .replace('{servers}', serverCount.toLocaleString());
+        index++;
 
-      client.user.setActivity(name, {
-        type: ActivityType[status.type] || ActivityType.Playing,
-        url: status.url || undefined
-      });
+        let name = status.name
+          .replace('{members}', totalMembers.toLocaleString('en-US'))
+          .replace('{servers}', serverCount.toLocaleString('en-US'));
+
+        client.user.setActivity(name, {
+          type: status.type === 'Streaming' ? ActivityType.Streaming :
+                status.type === 'Playing' ? ActivityType.Playing :
+                status.type === 'Watching' ? ActivityType.Watching :
+                status.type === 'Listening' ? ActivityType.Listening : ActivityType.Playing,
+          url: status.url || undefined
+        });
+      } catch (err) {
+        console.error('Status update error:', err);
+      }
     };
+
+    setDynamicStatus();
+    setInterval(setDynamicStatus, 30000); 
 
     // Set status immediately
     setDynamicStatus();
