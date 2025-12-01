@@ -4,29 +4,24 @@ const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('join')
-    .setDescription('Nasl-1 will join the fixed 24/7 voice channel'),
+    .setDescription('Nasl 1 joins the 24/7 voice channel'),
 
   async execute(interaction) {
     await interaction.deferReply();
 
-    
-    const FIXED_CHANNEL_ID = '1441136897836453960';
+    const CHANNEL_ID = '1441136897836453960'; // چنل 24/7 خودت
 
-    const channel = interaction.guild.channels.cache.get(FIXED_CHANNEL_ID);
+    const channel = interaction.guild.channels.cache.get(CHANNEL_ID);
+    if (!channel || channel.type !== ChannelType.GuildVoice)
+      return interaction.editReply('Channel not found!');
 
-    if (!channel || channel.type !== ChannelType.GuildVoice) {
-      return interaction.editReply({ content: 'Fixed voice channel not found!' });
-    }
+    const me = interaction.guild.members.me;
+    if (!channel.permissionsFor(me).has(['Connect', 'Speak']))
+      return interaction.editReply('I don\'t have permission to join!');
 
-    if (!channel.permissionsFor(interaction.guild.members.me).has(['Connect', 'Speak'])) {
-      return interaction.editReply({ content: 'I don\'t have permission to join this channel!' });
-    }
+    const old = getVoiceConnection(interaction.guild.id);
+    if (old) old.destroy();
 
-    // اگه قبلاً تو چنل دیگه بود، خارج شو
-    const oldConnection = getVoiceConnection(interaction.guild.id);
-    if (oldConnection) oldConnection.destroy();
-
-    // جوین به چنل
     joinVoiceChannel({
       channelId: channel.id,
       guildId: interaction.guild.id,
@@ -35,6 +30,6 @@ module.exports = {
       selfMute: false,
     });
 
-    await interaction.editReply({ content: `Successfully joined ${channel}! 24/7 mode active` });
+    await interaction.editReply(`Joined ${channel} — 24/7 active`);
   },
 };
