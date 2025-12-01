@@ -1,82 +1,81 @@
 const { Events, ChannelType } = require('discord.js');
 
+let pickingSession = null;
+
 module.exports = {
   name: Events.VoiceStateUpdate,
   async execute(oldState, newState) {
     const guild = newState.guild;
 
-    const MAIN_CHANNEL_ID = '1445119433344286841';     
-    const CATEGORY_ID = '1445119862765523165';         
+    // CHANGE THESE 3 LINES:
+    const MAIN_VOICE_ID     = '1445119433344286841';    // ← Line 9  → Your Waiting Room voice channel ID
+    const NOTIFY_CHANNEL_ID = '1445129299014451282';    // ← Line 10 → Text channel for embeds & !pick
+    const CATEGORY_ID       = '1445119862765523165';   // ← Line 11 → Category for Game-1 & Game-2 (optional, can be null)
 
-    const mainChannel = guild.channels.cache.get(MAIN_CHANNEL_ID);
-    if (!mainChannel) return;
+    const mainVoice = guild.channels.cache.get(MAIN_VOICE_ID);
+    const notifyChannel = guild.channels.cache.get(NOTIFY_CHANNEL_ID);
+    if (!mainVoice || !notifyChannel) return;
 
-    
-    if (newState.channelId === MAIN_CHANNEL_ID) {
-      const members = mainChannel.members.filter(m => !m.user.bot);
+    const members = mainVoice.members.filter(m => !m.user.bot);
 
-     
-      if (members.size === 2) {
+    if (members.size === 2 && !pickingSession) {
+      try {
+        const [game1, game2] = await Promise.all([
+          guild.channels.create({
+            name: 'Game-1',
+            type: ChannelType.GuildVoice,
+            parent: CATEGORY_ID,
+            userLimit: 10,
+            bitrate: 96000,
+          }),
+          guild.channels.create({
+            name: 'Game-2',
+            type: ChannelType.GuildVoice,
+            parent: CATEGORY_ID,
+            userLimit: 10,
+            bitrate: 96000,
+          })
+        ]);
 
-        
-        const existing = guild.channels.cache.find(c =>
-          c.name === 'Team-1' || c.name === 'Team-2'
-        );
-        if (existing) return;
+        const players = Array.from(members.values());
+        const shuffled = players.sort(() => Math.random() - 0.5);
+        const captain1 = shuffled[0];
+        const captain2 = shuffled[1];
 
-        try {
-          const [player1, player2] = members.map(m => m);
+        pickingSession = {
+          allPlayers: players,
+          available: players.slice(2),
+          team1: [captain1],
+          team2: [captain2],
+          game1,
+          game2,
+          currentTurn: captain1.id,
+          picksLeft: 8,
+          notifyChannel,
+          message: null
+        };
 
-          
-          const [ch1, ch2] = await Promise.all([
-            guild.channels.create({
-              name: 'Team-1',
-              type: ChannelType.GuildVoice,
-              parent: CATEGORY_ID || mainChannel.parentId,
-              userLimit: 1,        
-              bitrate: 64000,
-            }),
-            guild.channels.create({
-              name: 'Team-2',
-              type: ChannelType.GuildVoice,
-              parent: CATEGORY_ID || mainChannel.parentId,
-              userLimit: 1,        
-              bitrate: 64000,
-            })
-          ]);
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('Nasl 1 • Pick System')
+          .setDescription(`**Captains Selected!**\nCaptain 1: ${captain1}\nCaptain 2: ${captain2}\n\nCurrent turn: <@${captain1.id}>\nUse: \`!pick @user\``)
+          .setFooter({ text: 'Nasl 1 • Next Gen Bot' })
+          .setTimestamp();
 
-          
-          await Promise.all([
-            player1.voice.setChannel(ch1).catch(() => {}),
-            player2.voice.setChannel(ch2).catch(() => {})
-          ]);
+        const msg = await notifyChannel.send({ embeds: [embed] });
+        pickingSession.message = msg;
 
-          
-          const notifyChannel = guild.channels.cache.find(c => 
-            c.name.includes('general') || c.name.includes('chat')
-          );
-          if (notifyChannel) {
-            notifyChannel.send({
-              content: `Team Created\nTeam-1: ${player1}\nTeam-2: ${player2}`
-            });
-          }
-
-          console.log('1v1 Duel Created: 2 players → Team-1 & Team-2');
-        } catch (err) {
-          console.error('Duel creation error:', err);
-        }
+      } catch (err) {
+        console.error('Pick system setup failed:', err);
       }
     }
 
-    
-    if (oldState.channelId === MAIN_CHANNEL_ID) {
-      const currentCount = mainChannel.members.filter(m => !m.user.bot).size;
-      if (currentCount < 2) {
-        const teams = guild.channels.cache.filter(c =>
-          c.name === 'Team-1' || c.name === 'Team-2'
-        );
-        teams.forEach(ch => ch.delete().catch(() => {}));
-      }
+    // Cancel if less than 2 players
+    if (members.size < 2 && pickingSession) {
+      pickingSession.game1?.delete().catch(() => {});
+      pickingSession.game2?.delete().catch(() => {});
+      pickingSession.message?.delete().catch(() => {});
+      pickingSession = null;
     }
-  },
+  }
 };
