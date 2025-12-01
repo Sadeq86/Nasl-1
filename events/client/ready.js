@@ -96,12 +96,12 @@ module.exports = {
     };
 
     setDynamicStatus();
-    setInterval(setDynamicStatus, 30000); 
+    setInterval(setDynamicStatus, 5000); 
 
     // Set status immediately
     setDynamicStatus();
 
     // Update every 25 seconds
-    setInterval(setDynamicStatus, 25_000);
+    setInterval(setDynamicStatus, 5_000);
   },
 };
