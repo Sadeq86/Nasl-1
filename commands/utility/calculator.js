@@ -9,8 +9,8 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
 
-    // آیدی چنل 24/7 خودت رو اینجا بذار
-    const FIXED_CHANNEL_ID = '1441136897836453963';
+    
+    const FIXED_CHANNEL_ID = '1441136897836453960';
 
     const channel = interaction.guild.channels.cache.get(FIXED_CHANNEL_ID);
 
