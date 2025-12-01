@@ -1,5 +1,5 @@
 const { Events, EmbedBuilder, Colors } = require('discord.js');
-const { pickingSession } = require('events/voice/voiceStateUpdate.js');
+const { pickingSession } = require('events/GuessGame.js');
 
 module.exports = {
   name: Events.MessageCreate,
