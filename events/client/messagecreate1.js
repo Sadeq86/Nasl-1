@@ -6,69 +6,61 @@ module.exports = {
     if (message.author.bot) return;
     if (!message.content.startsWith('!pick ')) return;
 
-    const voiceFile = require('../voice/voiceStateUpdate.js');
-    const pickingSession = voiceFile.pickingSession();
-
-    if (!pickingSession) return message.reply('No active picking session!');
+    const session = require('../voice/voiceStateUpdate.js').getSession();
+    if (!session) return message.reply('No active picking session!');
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Mention a player! `!pick @User`');
+    if (!target) return message.reply('Please mention a player! Example: `!pick @Sadeq`');
 
-    if (!pickingSession.available.some(p => p.id === target.id))
-      return message.reply('This player is not available!');
+    if (!session.available.some(p => p.id === target.id))
+      return message.reply('This player is not available for picking!');
 
-    if (message.author.id !== pickingSession.currentTurn)
-      return message.reply(`Not your turn! Current: <@${pickingSession.currentTurn}>`);
+    if (message.author.id !== session.currentTurn)
+      return message.reply(`It's not your turn! Current turn: <@${session.currentTurn}>`);
 
-    // اضافه کردن به تیم
-    if (pickingSession.team1[0].id === message.author.id) {
-      pickingSession.team1.push(target);
+    // Add player to correct team
+    if (session.team1[0].id === message.author.id) {
+      session.team1.push(target);
     } else {
-      pickingSession.team2.push(target);
+      session.team2.push(target);
     }
 
-    pickingSession.available = pickingSession.available.filter(p => p.id !== target.id);
-    pickingSession.picksLeft--;
+    session.available = session.available.filter(p => p.id !== target.id);
+    session.picksLeft--;
+    session.currentTurn = session.team1[0].id === message.author.id ? session.team2[0].id : session.team1[0].id;
 
-    pickingSession.currentTurn = pickingSession.team1[0].id === message.author.id
-      ? pickingSession.team2[0].id
-      : pickingSession.team1[0].id;
-
-    // آپدیت ایمبد
+    // Update live embed
     const embed = new EmbedBuilder()
-      .setColor(0xFBBF24)
+      .setColor(0x5865F2)
       .setTitle('Nasl 1 • Live Picking')
       .addFields(
-        { name: 'Team 1 Captain', value: pickingSession.team1[0].toString(), inline: true },
-        { name: 'Team 2 Captain', value: pickingSession.team2[0].toString(), inline: true },
-        { name: 'Team 1', value: pickingSession.team1.slice(1).map(m => m.toString()).join('\n') || '—', inline: true },
-        { name: 'Team 2', value: pickingSession.team2.slice(1).map(m => m.toString()).join('\n') || '—', inline: true },
-        { name: 'Available', value: pickingSession.available.map(m => m.toString()).join('\n') || 'None', inline: false },
-        { name: 'Next Pick', value: `<@${pickingSession.currentTurn}>`, inline: false }
+        { name: 'Team 1', value: session.team1.map(m => m.toString()).join('\n'), inline: true },
+        { name: 'Team 2', value: session.team2.map(m => m.toString()).join('\n'), inline: true },
+        { name: 'Remaining Players', value: session.available.map(m => m.toString()).join('\n') || '—', inline: false },
+        { name: 'Next Turn', value: `<@${session.currentTurn}>`, inline: false }
       )
-      .setFooter({ text: `Nasl 1 • ${pickingSession.picksLeft} picks left` })
+      .setFooter({ text: `${session.picksLeft} picks left` })
       .setTimestamp();
 
-    await pickingSession.message.edit({ embeds: [embed] });
+    await session.message.edit({ embeds: [embed] });
     await message.delete().catch(() => {});
 
-    // تموم شد
-    if (pickingSession.picksLeft === 0) {
-      const final = new EmbedBuilder()
-        .setColor(0x00FF00)
+    // Picking finished → move players
+    if (session.picksLeft === 0) {
+      const finalEmbed = new EmbedBuilder()
+        .setColor(0x00ff00)
         .setTitle('Picking Complete!')
-        .setDescription('Teams moved to voice channels!')
-        .addFields(
-          { name: 'Game-1', value: pickingSession.team1.map(m => m.toString()).join('\n'), inline: true },
-          { name: 'Game-2', value: pickingSession.team2.map(m => m.toString()).join('\n'), inline: true }
-        );
+        .setDescription('Both teams are ready and moved to their voice channels!');
 
-      await pickingSession.notifyChannel.send({ embeds: [final] });
+      await session.textChannel.send({ embeds: [finalEmbed], content: '@everyone' });
 
-      pickingSession.team1.forEach(m => m.voice.setChannel(pickingSession.game1).catch(() => {}));
-      pickingSession.team2.forEach(m => m.voice.setChannel(pickingSession.game2).catch(() => {}));
+      session.team1.forEach(m => m.voice.setChannel(session.game1).catch(() => {}));
+      session.team2.forEach(m => m.voice.setChannel(session.game2).catch(() => {}));
 
-      setTimeout(() => voiceFile.setPickingSession(null), 10000);
+      // Clean up after 15 seconds
+      setTimeout(() => {
+        require('events/voiceStateUpdate1.js').getSession = () => null;
+      }, 15000);
     }
   }
 };
