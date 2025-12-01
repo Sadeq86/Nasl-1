@@ -12,7 +12,7 @@ module.exports = {
     }
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Mention a player! Example: `!pick @Sadeq`');
+    if (!target) return message.reply('Mention a player! Example: `!pick @Discord-Id`');
 
     if (!pickingSession.available.some(p => p.id === target.id)) {
       return message.reply('This player is not available for picking!');
