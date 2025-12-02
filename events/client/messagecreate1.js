@@ -3,16 +3,14 @@ const { Events, EmbedBuilder } = require('discord.js');
 module.exports = {
   name: Events.MessageCreate,
   async execute(message) {
-    if (message.author.bot) return;
+    if (message.author.bot) if (message.author.bot) return;
     if (!message.content.startsWith('!pick ')) return;
 
     let session;
     try {
-      // فایل وویس تو همون فولدر events هست → فقط ../ کافیه
       session = require('../voiceStateUpdate1.js').getSession();
     } catch (err) {
-      console.error('خطا در لود فایل وویس:', err);
-      return message.reply('Picking system is not ready yet. Please wait...');
+      return message.reply('Picking system not ready yet...');
     }
 
     if (!session) return message.reply('No active picking session!');
@@ -26,7 +24,6 @@ module.exports = {
     if (message.author.id !== session.currentTurn)
       return message.reply(`It's not your turn! Current turn: <@${session.currentTurn}>`);
 
-    // اضافه کردن به تیم درست
     if (session.team1[0].id === message.author.id) {
       session.team1.push(target);
     } else {
@@ -35,11 +32,8 @@ module.exports = {
 
     session.available = session.available.filter(p => p.id !== target.id);
     session.picksLeft--;
-    session.currentTurn = session.team1[0].id === message.author.id 
-      ? session.team2[0].id 
-      : session.team1[0].id;
+    session.currentTurn = session.team1[0].id === message.author.id ? session.team2[0].id : session.team1[0].id;
 
-    // آپدیت ایمبد زنده
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
       .setTitle('Nasl 1 • Live Picking')
@@ -55,24 +49,16 @@ module.exports = {
     await session.message.edit({ embeds: [embed] });
     await message.delete().catch(() => {});
 
-    // وقتی پیک تموم شد → انتقال به چنل‌ها
     if (session.picksLeft === 0) {
       const finalEmbed = new EmbedBuilder()
         .setColor(0x00ff00)
         .setTitle('Picking Complete!')
-        .setDescription('Both teams are ready and moved to their voice channels!')
-        .setTimestamp();
+        .setDescription('Teams moved to voice channels!');
 
       await session.textChannel.send({ embeds: [finalEmbed], content: '@everyone' });
 
       session.team1.forEach(m => m.voice.setChannel(session.game1).catch(() => {}));
       session.team2.forEach(m => m.voice.setChannel(session.game2).catch(() => {}));
-
-      // پاک کردن جلسه بعد ۱۵ ثانیه
-      setTimeout(() => {
-        const voiceFile = require('../voiceStateUpdate1.js');
-        voiceFile.getSession = () => null;
-      }, 15000);
     }
   }
 };
