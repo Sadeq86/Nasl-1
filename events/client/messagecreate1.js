@@ -15,7 +15,7 @@ module.exports = {
     if (!session) return;
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('منشن کن!');
+    if (!target) return message.reply('Mention !');
     if (!session.available.some(p => p.id === target.id)) return message.reply('❌ This Player Isnt Here');
     if (message.author.id !== session.currentTurn) return message.reply(`🔴 This Is Not Your Turn : <@${session.currentTurn}>`);
 
