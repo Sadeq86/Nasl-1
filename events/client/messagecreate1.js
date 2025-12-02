@@ -45,7 +45,7 @@ module.exports = {
     await message.delete().catch(() => {});
 
     if (session.picksLeft === 0) {
-      await session.textChannel.send('@everyone پیک تموم شد!');
+      await session.textChannel.send('@everyone Picking Has Been Ended');
       session.team1.forEach(m => m.voice.setChannel(session.game1).catch(() => {}));
       session.team2.forEach(m => m.voice.setChannel(session.game2).catch(() => {}));
     }
