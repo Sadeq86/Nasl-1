@@ -5,31 +5,40 @@ let pickingSession = null;
 module.exports = {
   name: Events.VoiceStateUpdate,
   async execute(oldState, newState) {
-    const guild = newState.guild;
+    const guild = newState.guild || oldState.guild;
 
     // ←←← فقط این ۳ خط رو با آیدی‌های خودت عوض کن
-    const MAIN_VOICE_ID     = '1445119433344286841'; // چنل Waiting Room
-    const NOTIFY_CHANNEL_ID = '144512000111222333';  // چنل متنی برای ایمبد
-    const CATEGORY_ID       = '1445119862765523165'; // کتگوری Game-1 و Game-2 (می‌تونی null بذاری)
+    const WAITING_ROOM_ID = '1445119433344286841'; // چنل اصلی که همه میان توش
+    const TEXT_CHANNEL_ID = '144512000111222333';  // چنل متنی برای ایمبد
+    const CATEGORY_ID     = '1445119862765523165'; // کتگوری (یا null)
 
-    const mainVoice = guild.channels.cache.get(MAIN_VOICE_ID);
-    const notifyChannel = guild.channels.cache.get(NOTIFY_CHANNEL_ID);
-    if (!mainVoice || !notifyChannel) return;
+    const waitingRoom = guild.channels.cache.get(WAITING_ROOM_ID);
+    const textChannel = guild.channels.cache.get(TEXT_CHANNEL_ID);
+    if (!waitingRoom || !textChannel) return;
 
-    const members = mainVoice.members.filter(m => !m.user.bot);
+    // فقط اعضای واقعی (نه بات)
+    const members = waitingRoom.members.filter(m => !m.user.bot);
 
-    // وقتی دقیقاً ۲ نفر شدن
+    // اگه قبلاً جلسه بود و حالا کمتر از ۲ نفر شدن → پاک کن
+    if (pickingSession && members.size < 2) {
+      pickingSession.game1?.delete().catch(() => {});
+      pickingSession.game2?.delete().catch(() => {});
+      pickingSession.message?.delete().catch(() => {});
+      pickingSession = null;
+      return;
+    }
+
+    // فقط وقتی دقیقاً ۲ نفر شدن و قبلاً جلسه نبود
     if (members.size === 2 && !pickingSession) {
       try {
+        // ساخت دو تا چنل جدید
         const [game1, game2] = await Promise.all([
           guild.channels.create({ name: 'Game-1', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 }),
           guild.channels.create({ name: 'Game-2', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 })
         ]);
 
         const players = Array.from(members.values());
-        const shuffled = [...players].sort(() => Math.random() - 0.5);
-        const captain1 = shuffled[0];
-        const captain2 = shuffled[1];
+        const [captain1, captain2] = players.sort(() => Math.random() - 0.5);
 
         pickingSession = {
           available: players.filter(p => p.id !== captain1.id && p.id !== captain2.id),
@@ -38,33 +47,29 @@ module.exports = {
           game1,
           game2,
           currentTurn: captain1.id,
-          picksLeft: 8,
-          notifyChannel,
+          picksLeft: Math.max(0, players.length - 2),
+          textChannel,
           message: null
         };
 
         const embed = new EmbedBuilder()
           .setColor(0x00ff00)
-          .setTitle('Nasl 1 • Pick System')
-          .setDescription(`کاپیتان‌ها: ${captain1} vs ${captain2}\n\nنوبت پیک: ${captain1}\nاز دستور \`!pick @user\` استفاده کن`)
+          .setTitle('Nasl 1 • Pick Phase Started')
+          .setDescription(`**Captains Selected**\n${captain1}  vs  ${captain2}\n\nCurrent turn: ${captain1}\nUse: \`!pick @player\``)
           .setFooter({ text: 'Nasl 1 • Next Gen Bot' })
           .setTimestamp();
 
-        const msg = await notifyChannel.send({ embeds: [embed] });
+        const msg = await textChannel.send({ embeds: [embed], content: '@here Pick phase started!' });
         pickingSession.message = msg;
 
-      } catch (e) {
-        console.error('Picking failed:', e);
-      }
-    }
+        console.log('Picking session started with 2 players!');
 
-    if (members.size < 2 && pickingSession) {
-      pickingSession.game1?.delete().catch(() => {});
-      pickingSession.game2?.delete().catch(() => {});
-      pickingSession.message?.delete().catch(() => {});
-      pickingSession = null;
+      } catch (error) {
+        console.error('Failed to start picking:', error);
+        textChannel.send('Error: Could not start picking system!').catch(() => {});
+      }
     }
   }
 };
 
-module.exports.pickingSession = () => pickingSession;
+module.exports.getSession = () => pickingSession;
