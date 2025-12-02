@@ -17,8 +17,8 @@ module.exports = {
 
     const members = waitingRoom.members.filter(m => !m.user.bot);
 
-    // اگه کمتر از ۲ نفر شد → همه چیز پاک شه
-    if (pickingSession && members.size < 2) {
+    // اگر جلسه فعال بود و تعداد افتاد زیر ۳ → همه چیز پاک شه
+    if (pickingSession && members.size < 3) {
       pickingSession.game1?.delete().catch(() => {});
       pickingSession.game2?.delete().catch(() => {});
       pickingSession.message?.delete().catch(() => {});
@@ -26,8 +26,8 @@ module.exports = {
       return;
     }
 
-    // وقتی دقیقاً ۲ نفر شدن → شروع پیک
-    if (members.size === 2 && !pickingSession) {
+    // فقط وقتی دقیقاً ۸ نفر شدن → شروع پیک
+    if (members.size === 8 && !pickingSession) {
       try {
         const [game1, game2] = await Promise.all([
           guild.channels.create({ name: 'Team-1', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 }),
@@ -35,18 +35,19 @@ module.exports = {
         ]);
 
         const players = Array.from(members.values());
-        const shuffled = [...players].sort(() => Math.random() - 0.5);
+        const shuffled = players.sort(() => Math.random() - 0.5);
         const captain1 = shuffled[0];
         const captain2 = shuffled[1];
 
         pickingSession = {
-          available: players.filter(p => p.id !== captain1.id && p.id !== captain2.id),
+          available: shuffled.slice(2), // ۶ نفر باقی‌مونده
           team1: [captain1],
           team2: [captain2],
-          game1,
-          game2,
+          game1, game2,
           currentTurn: captain1.id,
-          picksLeft: Math.max(0, players.length - 2),
+          picksLeft: 6,
+          pickOrder: [1, 2, 1, 1, 1, 1], // ۱ نفر، ۲ نفر، ۱ نفر، ۱ نفر، ۱ نفر، ۱ نفر
+          currentPickIndex: 0,
           textChannel,
           message: null
         };
@@ -54,20 +55,23 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor(0x00f5ff)
           .setTitle('Pick a player')
-          .setDescription(`**Captains:** ${captain1} vs ${captain2}\n\n**Current Turn:** ${captain1}\nUse: \`!pick @player\``)
+          .setDescription(`
+**Captains**
+${captain1}  vs  ${captain2}
+
+**Current Turn** — ${captain1}
+**Pick Phase** — 1 player
+
+Use: \`!pick @player\`
+          `.trim())
           .setFooter({ text: 'Nasl-1 System' })
           .setTimestamp();
 
-        const msg = await textChannel.send({ 
-          embeds: [embed], 
-          content: '@here Pick Phase Started!' 
-        });
-
+        const msg = await textChannel.send({ content: '@here پیک شروع شد!', embeds: [embed] });
         pickingSession.message = msg;
-        console.log('Picking session started!');
 
-      } catch (error) {
-        console.error('Pick system error:', error);
+      } catch (err) {
+        console.error(err);
       }
     }
   }
