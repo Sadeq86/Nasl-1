@@ -53,13 +53,13 @@ module.exports = {
         };
 
         const embed = new EmbedBuilder()
-          .setColor(0x00ff00)
-          .setTitle('Nasl 1 • Pick Phase Started')
+          .setColor(#00f5ff)
+          .setTitle('Pick A Player')
           .setDescription(`**Captains Selected**\n${captain1}  vs  ${captain2}\n\nCurrent turn: ${captain1}\nUse: \`!pick @player\``)
-          .setFooter({ text: 'Nasl 1 • Next Gen Bot' })
+          .setFooter({ text: 'Nasl 1 System' })
           .setTimestamp();
 
-        const msg = await textChannel.send({ embeds: [embed], content: '@here Pick phase started!' });
+        const msg = await textChannel.send({ embeds: [embed], content: '🔎 Pick Please ||@here||' });
         pickingSession.message = msg;
 
         console.log('Picking session started with 2 players!');
