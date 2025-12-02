@@ -3,7 +3,7 @@ const { Events, EmbedBuilder } = require('discord.js');
 module.exports = {
   name: Events.MessageCreate,
   async execute(message) {
-    if (message.author.bot) if (message.author.bot) return;
+    if (message.author.bot) return;
     if (!message.content.startsWith('!pick ')) return;
 
     let session;
@@ -24,6 +24,7 @@ module.exports = {
     if (message.author.id !== session.currentTurn)
       return message.reply(`It's not your turn! Current turn: <@${session.currentTurn}>`);
 
+    // Add to correct team
     if (session.team1[0].id === message.author.id) {
       session.team1.push(target);
     } else {
@@ -34,6 +35,7 @@ module.exports = {
     session.picksLeft--;
     session.currentTurn = session.team1[0].id === message.author.id ? session.team2[0].id : session.team1[0].id;
 
+    // Update live embed
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
       .setTitle('Nasl 1 • Live Picking')
@@ -49,11 +51,13 @@ module.exports = {
     await session.message.edit({ embeds: [embed] });
     await message.delete().catch(() => {});
 
+    // When picking is done
     if (session.picksLeft === 0) {
       const finalEmbed = new EmbedBuilder()
         .setColor(0x00ff00)
         .setTitle('Picking Complete!')
-        .setDescription('Teams moved to voice channels!');
+        .setDescription('Teams moved to voice channels!')
+        .setTimestamp();
 
       await session.textChannel.send({ embeds: [finalEmbed], content: '@everyone' });
 
