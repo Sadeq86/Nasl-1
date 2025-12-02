@@ -7,7 +7,6 @@ module.exports = {
   async execute(oldState, newState) {
     const guild = newState.guild || oldState.guild;
 
-    // فقط این ۳ تا آیدی رو عوض کن
     const WAITING_ROOM_ID = '1445119433344286841';
     const TEXT_CHANNEL_ID = '1445129299014451282';
     const CATEGORY_ID     = '1445119862765523165';
@@ -18,7 +17,7 @@ module.exports = {
 
     const members = waitingRoom.members.filter(m => !m.user.bot);
 
-    // اگه کمتر از ۲ نفر شد → پاک کن همه چیز
+    // اگه کمتر از ۲ نفر شد → همه چیز پاک شه
     if (pickingSession && members.size < 2) {
       pickingSession.game1?.delete().catch(() => {});
       pickingSession.game2?.delete().catch(() => {});
@@ -27,22 +26,12 @@ module.exports = {
       return;
     }
 
-    // وقتی دقیقاً ۲ نفر شدن و جلسه‌ای نیست → شروع پیک
+    // وقتی دقیقاً ۲ نفر شدن → شروع پیک
     if (members.size === 2 && !pickingSession) {
       try {
         const [game1, game2] = await Promise.all([
-          guild.channels.create({ 
-            name: 'Team-1', 
-            type: ChannelType.GuildVoice, 
-            parent: CATEGORY_ID || null, 
-            userLimit: 10 
-          }),
-          guild.channels.create({ 
-            name: 'Team-2', 
-            type: ChannelType.GuildVoice, 
-            parent: CATEGORY_ID || null, 
-            userLimit: 10 
-          })
+          guild.channels.create({ name: 'Team-1', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 }),
+          guild.channels.create({ name: 'Team-2', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 })
         ]);
 
         const players = Array.from(members.values());
@@ -63,10 +52,10 @@ module.exports = {
         };
 
         const embed = new EmbedBuilder()
-          .setColor(0x00f5ff)  // درست شد: عدد هگز یا '#00f5ff'
-          .setTitle('Nasl 1 • Pick Phase')
+          .setColor(0x00f5ff)
+          .setTitle('Pick a player')
           .setDescription(`**Captains:** ${captain1} vs ${captain2}\n\n**Current Turn:** ${captain1}\nUse: \`!pick @player\``)
-          .setFooter({ text: 'Nasl 1 • Next Gen Bot' })
+          .setFooter({ text: 'Nasl-1 System' })
           .setTimestamp();
 
         const msg = await textChannel.send({ 
@@ -75,11 +64,10 @@ module.exports = {
         });
 
         pickingSession.message = msg;
-        console.log('Picking session started successfully!');
+        console.log('Picking session started!');
 
       } catch (error) {
-        console.error('Pick system failed:', error);
-        textChannel.send('Error: Could not start picking system!').catch(() => {});
+        console.error('Pick system error:', error);
       }
     }
   }
