@@ -9,22 +9,16 @@ module.exports = {
     let session;
     try {
       session = require('../voiceStateUpdate1.js').getSession();
-    } catch (err) {
-      return message.reply('Picking system not ready yet...');
+    } catch {
+      return;
     }
-
-    if (!session) return message.reply('No active picking session!');
+    if (!session) return;
 
     const target = message.mentions.members.first();
-    if (!target) return message.reply('Please mention a player! Example: `!pick @Sadeq`');
+    if (!target) return message.reply('منشن کن!');
+    if (!session.available.some(p => p.id === target.id)) return message.reply('❌ This Player Isnt Here');
+    if (message.author.id !== session.currentTurn) return message.reply(`🔴 This Is Not Your Turn : <@${session.currentTurn}>`);
 
-    if (!session.available.some(p => p.id === target.id))
-      return message.reply('This player is not available for picking!');
-
-    if (message.author.id !== session.currentTurn)
-      return message.reply(`It's not your turn! Current turn: <@${session.currentTurn}>`);
-
-    // Add to correct team
     if (session.team1[0].id === message.author.id) {
       session.team1.push(target);
     } else {
@@ -35,32 +29,23 @@ module.exports = {
     session.picksLeft--;
     session.currentTurn = session.team1[0].id === message.author.id ? session.team2[0].id : session.team1[0].id;
 
-    // Update live embed
     const embed = new EmbedBuilder()
-      .setColor(0x5865F2)
-      .setTitle('Nasl 1 • Live Picking')
+      .setColor(0x00f5ff)
+      .setTitle('Pick a player')
       .addFields(
         { name: 'Team 1', value: session.team1.map(m => m.toString()).join('\n'), inline: true },
         { name: 'Team 2', value: session.team2.map(m => m.toString()).join('\n'), inline: true },
-        { name: 'Remaining Players', value: session.available.map(m => m.toString()).join('\n') || '—', inline: false },
+        { name: 'Remaining', value: session.available.map(m => m.toString()).join('\n') || '—', inline: false },
         { name: 'Next Turn', value: `<@${session.currentTurn}>`, inline: false }
       )
-      .setFooter({ text: `${session.picksLeft} picks left` })
+      .setFooter({ text: 'Nasl-1 System' })
       .setTimestamp();
 
     await session.message.edit({ embeds: [embed] });
     await message.delete().catch(() => {});
 
-    // When picking is done
     if (session.picksLeft === 0) {
-      const finalEmbed = new EmbedBuilder()
-        .setColor(0x00ff00)
-        .setTitle('Picking Complete!')
-        .setDescription('Teams moved to voice channels!')
-        .setTimestamp();
-
-      await session.textChannel.send({ embeds: [finalEmbed], content: '@everyone' });
-
+      await session.textChannel.send('@everyone پیک تموم شد!');
       session.team1.forEach(m => m.voice.setChannel(session.game1).catch(() => {}));
       session.team2.forEach(m => m.voice.setChannel(session.game2).catch(() => {}));
     }
