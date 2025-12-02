@@ -33,8 +33,8 @@ module.exports = {
       try {
         // ساخت دو تا چنل جدید
         const [game1, game2] = await Promise.all([
-          guild.channels.create({ name: 'Game-1', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 }),
-          guild.channels.create({ name: 'Game-2', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 })
+          guild.channels.create({ name: '〢🎮│Team-1', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 }),
+          guild.channels.create({ name: '〢🎮│Team-2', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 })
         ]);
 
         const players = Array.from(members.values());
