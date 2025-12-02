@@ -9,7 +9,7 @@ module.exports = {
 
     // ←←← فقط این ۳ خط رو با آیدی‌های خودت عوض کن
     const WAITING_ROOM_ID = '1445119433344286841'; // چنل اصلی که همه میان توش
-    const TEXT_CHANNEL_ID = '144512000111222333';  // چنل متنی برای ایمبد
+    const TEXT_CHANNEL_ID = '1445129299014451282';  // چنل متنی برای ایمبد
     const CATEGORY_ID     = '1445119862765523165'; // کتگوری (یا null)
 
     const waitingRoom = guild.channels.cache.get(WAITING_ROOM_ID);
