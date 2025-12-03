@@ -4,71 +4,56 @@ const path = require('path');
 
 function updateStatus(client) {
   try {
-    // Load status configuration from status.json in root directory
     const statusConfigPath = path.join(process.cwd(), 'status.json');
     const statusConfig = JSON.parse(fs.readFileSync(statusConfigPath, 'utf8'));
-
     const status = statusConfig.status;
-    const interval = statusConfig.interval;
+    const interval = statusConfig.interval || 15000; // پیش‌فرض ۶۰ ثانیه
 
-    // Function to update the bot's status
     const updatePresence = () => {
-      // Get the correct ActivityType value directly from the enum
-      // ActivityType.Streaming instead of ActivityType['STREAMING']
       let activityType;
-      switch (status.type.toUpperCase()) {
-        case 'PLAYING':
-          activityType = ActivityType.Playing;
-          break;
-        case 'STREAMING':
-          activityType = ActivityType.Streaming;
-          break;
-        case 'LISTENING':
-          activityType = ActivityType.Listening;
-          break;
-        case 'WATCHING':
-          activityType = ActivityType.Watching;
-          break;
-        case 'COMPETING':
-          activityType = ActivityType.Competing;
-          break;
-        default:
-          activityType = ActivityType.Playing;
+      let activityName = status.state
+        .replace('{serverCount}', client.guilds.cache.size)
+        .replace('{userCount}', client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0));
+
+      // اگر نوع استاتوس STREAMING بود → اسم رو به "Watch" تغییر بده + لینک دعوت سرور
+      if (status.type.toUpperCase() === 'STREAMING') {
+        activityType = ActivityType.Streaming;
+        activityName = activityName || "Nasl 1"; // اسم دلخواه
+      } else {
+        // برای بقیه نوع‌ها (Playing, Watching, ...)
+        switch (status.type.toUpperCase()) {
+          case 'PLAYING':   activityType = ActivityType.Playing; break;
+          case 'LISTENING': activityType = ActivityType.Listening; break;
+          case 'WATCHING':  activityType = ActivityType.Watching; break;
+          case 'COMPETING': activityType = ActivityType.Competing; break;
+          default:          activityType = ActivityType.Playing;
+        }
       }
 
-      // Replace variables in status text
-      let state = status.state
-        .replace('{serverCount}', client.guilds.cache.size)
-        .replace(
-          '{userCount}',
-          client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0)
-        );
-
-      // Create activity object
       const activity = {
-        name: state,
+        name: activityName,
         type: activityType,
       };
 
-      // Add URL for streaming status
+      // فقط وقتی Streaming هست → لینک دعوت سرور خودت رو بذار
       if (status.type.toUpperCase() === 'STREAMING') {
-        activity.url = status.url;
+        activity.url = 'https://discord.gg/vJsa3cjE'; // ← اینجا لینک دعوت سرورت رو بذار
       }
 
-      // Set the presence
       client.user.setPresence({
         activities: [activity],
-        status: 'online',
+        status: 'idle' // یا 'idle', 'dnd'
       });
     };
 
-    // Set initial status
+    // اولین بار
     updatePresence();
 
-    // Update status regularly to refresh the counts
+    // هر چند ثانیه یکبار آپدیت کن (برای آپدیت تعداد سرور و ممبر)
     setInterval(updatePresence, interval);
+
   } catch (error) {
-    console.error(`Error with status configuration: ${error.message}`);
+    console.error('Status Updater Error:', error.message);
   }
 }
 
