@@ -7,6 +7,4 @@ const welcomeSchema = new mongoose.Schema({
   channelId: { type: String, default: null },
 });
 
-const Welcome = mongoose.model('Welcome', welcomeSchema);
-
-module.exports = Welcome;
+module.exports = mongoose.model('Welcome', welcomeSchema);
