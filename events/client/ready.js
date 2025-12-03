@@ -1,12 +1,10 @@
 const { Events, ActivityType } = require('discord.js');
 const startGiveawayScheduler = require('../../functions/giveawayScheduler');
-const serverStatusUpdater = require('../../functions/serverStatusUpdater');
 const updateStatus = require('../../functions/statusRotation');
 const fs = require('fs');
 const path = require('path');
 
 // Load status.json
-const statusFilePath = path.join(__dirname, '../../status.json');
 let statuses = [];
 
 if (fs.existsSync(statusFilePath)) {
@@ -19,7 +17,7 @@ if (fs.existsSync(statusFilePath)) {
   }
 } else {
   console.warn('status.json not found, using default status');
-  statuses = [{ name: 'Nasl 1 • Next Gen Bot', type: 'Playing' }];
+  statuses = [{ name: 'Nasl 1 ', type: 'Playing' }];
 }
 
 module.exports = {
