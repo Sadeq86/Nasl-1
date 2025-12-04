@@ -1,11 +1,12 @@
-// src/events/messageCreate.js
+// src/events/messageCreate.js — FINAL WORKING VERSION (English + correct parameters)
 const { Events, EmbedBuilder } = require('discord.js');
 
-const AI_CHANNEL_ID = '1445129299014451282'; // Change to your AI channel ID
+const AI_CHANNEL_ID = '1445129299014451282'; // ← Change if needed
 
 module.exports = {
   name: Events.MessageCreate,
-  async execute(message, client) {
+  async execute(message, client) { // ← اول message, بعد client (این مهمه!)
+    // Only respond in AI channel
     if (message.channel.id !== AI_CHANNEL_ID) return;
     if (message.author.bot) return;
     if (!message.content.trim()) return;
@@ -13,7 +14,7 @@ module.exports = {
     await message.channel.sendTyping();
 
     try {
-      const res = await fetch('https://api.yesai.ir/v1/chat/completions', {
+      const response = await fetch('https://api.yesai.ir/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -24,10 +25,11 @@ module.exports = {
         })
       });
 
-      const data = await res.json();
-      let reply = data.choices?.[0]?.message?.content?.trim() || 'I am thinking...';
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      // Clean up newlines
+      const data = await response.json();
+      let reply = data.choices?.[0]?.message?.content?.trim() || 'Thinking...';
+
       reply = reply.replace(/\\n/g, '\n');
 
       const embed = new EmbedBuilder()
@@ -39,7 +41,7 @@ module.exports = {
       await message.reply({ embeds: [embed] });
 
     } catch (error) {
-      console.log('AI Error:', error.message);
+      console.error('AI Chat Error:', error.message); // ← این لاگ حتماً میاد
 
       const errorEmbed = new EmbedBuilder()
         .setColor('#ff0000')
