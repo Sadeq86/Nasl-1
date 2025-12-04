@@ -1,15 +1,32 @@
 // events/client/ready.js
-const { Events } = require('discord.js');
-const mongoose = require('mongoose');
+const { Events, ActivityType } = require('discord.js');
 
 module.exports = {
   name: Events.ClientReady,
   once: true,
-  async execute(client) {
-    console.log(`✅ ${client.user.tag} is online!`);
+  execute(client) {
+    console.log(`Bot online as ${client.user.tag}`);
 
-    // وضعیت بات (ساده و بدون ارور)
-    client.user.setActivity('Nasl 1 | /help', { type: 3 }); // Watching
+    const updateActivity = () => {
+      const memberCount = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
+
+      client.user.setPresence({
+        activities: [{
+          name: `${memberCount.toLocaleString()} In Nasl-1`,
+          type: ActivityType.Streaming,
+          url: "https://discord.gg/hdETrUsv" // ← لینک دعوت دائمی سرورت رو اینجا بذار
+        }],
+        status: 'idle'
+      });
+    };
+
+    // اولین بار
+    updateActivity();
+
+    // هر ۳۰ ثانیه آپدیت کن (تعداد ممبر تغییر کنه)
+    setInterval(updateActivity, 30_000);
+  }
+};
 
     // مانگویی (اگه قبلاً وصل شده بود دوباره وصل نکن)
     if (mongoose.connection.readyState !== 1) {
