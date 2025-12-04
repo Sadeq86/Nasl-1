@@ -1,44 +1,70 @@
+// deploy-commands.js — English & Bulletproof Version
 require('dotenv').config();
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
-const clientId = process.env.DISCORD_CLIENT_ID;
-const token = process.env.DISCORD_TOKEN;
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID || process.env.CLIENT_ID;
+const TOKEN = process.env.DISCORD_TOKEN || process.env.TOKEN;
 
-module.exports = async () => {
-  const commands = [];
+if (!CLIENT_ID || !TOKEN) {
+  console.error('ERROR: CLIENT_ID or TOKEN is missing in .env');
+  process.exit(1);
+}
 
-  const commandsPath = path.join(__dirname, '../commands');
-  fs.readdirSync(commandsPath).forEach((category) => {
-    const categoryPath = path.join(commandsPath, category);
-    const commandFiles = fs
-      .readdirSync(categoryPath)
-      .filter((file) => file.endsWith('.js'));
+const commands = [];
+const commandsPath = path.join(__dirname, 'commands');
 
-    for (const file of commandFiles) {
-      const command = require(path.join(categoryPath, file));
-      commands.push(command.data.toJSON());
+if (!fs.existsSync(commandsPath)) {
+  console.error('ERROR: "commands" folder not found!');
+  process.exit(1);
+}
+
+const categories = fs.readdirSync(commandsPath);
+
+for (const category of categories) {
+  const categoryPath = path.join(commandsPath, category);
+  if (!fs.statSync(categoryPath).isDirectory()) continue;
+
+  const commandFiles = fs.readdirSync(categoryPath).filter(file => file.endsWith('.js'));
+
+  for (const file of commandFiles) {
+    const filePath = path.join(categoryPath, file);
+
+    try {
+      // Clear cache so deleted/edited commands are reloaded properly
+      delete require.cache[require.resolve(filePath)];
+      
+      const command = require(filePath);
+
+      if (command.data && typeof command.data.toJSON === 'function') {
+        commands.push(command.data.toJSON());
+        console.log(`Loaded: ${command.data.name}`);
+      } else {
+        console.warn(`Skipped: ${file} (missing data or toJSON)`);
+      }
+    } catch (error) {
+      console.warn(`Failed to load: ${file} → ${error.message}`);
+      // Doesn't crash — continues with next file
     }
-  });
+  }
+}
 
-  const rest = new REST({ version: '10' }).setToken(token);
+(async () => {
+  console.log(`Starting deployment of ${commands.length} slash commands...`);
+
+  const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   try {
-    console.log(
-      global.styles.warningColor(
-        '🔄 Started refreshing application (/) commands.'
-      )
+    await rest.put(
+      Routes.applicationCommands(CLIENT_ID),
+      { body: commands }
     );
 
-    await rest.put(Routes.applicationCommands(clientId), { body: commands });
-
-    console.log(
-      global.styles.commandColor(
-        '✅ Successfully reloaded application (/) commands.'
-      )
-    );
+    console.log('All slash commands deployed successfully!');
+    console.log('Only existing commands will now appear in the / menu.');
+    console.log('You can safely delete any command file — it will disappear instantly after next deploy.');
   } catch (error) {
-    console.error(global.styles.errorColor(error));
+    console.error('Deploy failed:', error.message);
   }
-};
+})();
