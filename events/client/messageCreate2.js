@@ -1,8 +1,7 @@
-// src/events/messageCreate.js — وصل شده به Grok (من!)
+// src/events/messageCreate.js
 const { Events, EmbedBuilder } = require('discord.js');
-const fetch = require('node-fetch');
 
-const AI_CHANNEL_ID = '1445129299014451282'; // آیدی چنل AI
+const AI_CHANNEL_ID = '1445129299014451282'; // Change to your AI channel ID
 
 module.exports = {
   name: Events.MessageCreate,
@@ -14,44 +13,42 @@ module.exports = {
     await message.channel.sendTyping();
 
     try {
-      const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      const res = await fetch('https://api.yesai.ir/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer xai-api-key' // اینجا کلید Grok رو بذار (از x.ai/api بگیری)
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'grok-beta',
+          model: 'gemma-7b',
           messages: [{ role: 'user', content: message.content }],
           temperature: 0.8,
-          max_tokens: 800
+          max_tokens: 1000
         })
       });
 
-      const data = await response.json();
-      const reply = data.choices?.[0]?.message?.content?.trim() || 'Nasl-1 Ai Is Sleeping Right Now';
+      const data = await res.json();
+      let reply = data.choices?.[0]?.message?.content?.trim() || 'I am thinking...';
+
+      // Clean up newlines
+      reply = reply.replace(/\\n/g, '\n');
 
       const embed = new EmbedBuilder()
         .setColor('#00f5ff')
         .setDescription(reply.length > 4096 ? reply.slice(0, 4093) + '...' : reply)
-        .setFooter({ 
-          text: 'Nasl-1 AI', 
-          iconURL: client.user.displayAvatarURL() 
-        })
+        .setFooter({ text: 'Nasl-1 AI', iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
 
       await message.reply({ embeds: [embed] });
 
     } catch (error) {
-      console.log('Grok Error:', error.message);
+      console.log('AI Error:', error.message);
 
-      const embed = new EmbedBuilder()
+      const errorEmbed = new EmbedBuilder()
         .setColor('#ff0000')
         .setTitle('AI Error')
-        .setDescription('Nasl-1 AI Is Sleeping Right Now')
-        .setFooter({ text: 'Nasl-1 System' });
+        .setDescription('AI is having a bad day, try again in 10 seconds!')
+        .setFooter({ text: 'Nasl-1 System' })
+        .setTimestamp();
 
-      await message.reply({ embeds: [embed] }).catch(() => {});
+      await message.reply({ embeds: [errorEmbed] }).catch(() => {});
     }
   }
 };
