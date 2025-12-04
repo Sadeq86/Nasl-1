@@ -7,18 +7,17 @@ module.exports = (client) => {
 
   const loadEvents = (dir) => {
     const files = fs.readdirSync(dir);
-
     files.forEach((file) => {
       const filePath = path.join(dir, file);
       const stat = fs.lstatSync(filePath);
 
       if (stat.isDirectory()) {
         if (file === 'lavalink') {
+          // lavalink رو فعلاً دست نزن
           const lavalinkFiles = fs.readdirSync(filePath);
           lavalinkFiles.forEach((lavalinkFile) => {
             if (lavalinkFile.endsWith('.js')) {
               const event = require(path.join(filePath, lavalinkFile));
-
               if (event.isNodeEvent) {
                 client.lavalink.nodeManager.on(event.name, (...args) =>
                   event.execute(client, ...args)
@@ -36,10 +35,11 @@ module.exports = (client) => {
         }
       } else if (file.endsWith('.js')) {
         const event = require(filePath);
+
         if (event.once) {
-          client.once(event.name, (...args) => event.execute(...args));
+          client.once(event.name, (...args) => event.execute(...args, client)); // ← client پاس داده شد
         } else {
-          client.on(event.name, (...args) => event.execute(...args));
+          client.on(event.name, (...args) => event.execute(...args, client));    // ← client پاس داده شد
         }
         count++;
       }
@@ -47,8 +47,5 @@ module.exports = (client) => {
   };
 
   loadEvents(eventsPath);
-
-  console.log(
-    global.styles.successColor(`✅ Successfully loaded ${count} events`)
-  );
+  console.log(`Successfully loaded ${count} events`);
 };
