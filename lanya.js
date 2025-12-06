@@ -1,4 +1,4 @@
-// lanya.js — FINAL 100% WORKING (Commands will appear!)
+// lanya.js — FINAL 100% WORKING ENGLISH VERSION (DECEMBER 2025)
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -26,9 +26,10 @@ global.styles = {
   error: chalk.red,
 };
 
-// هندلرها
+// Load handlers safely
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
+
 for (const file of handlerFiles) {
   try {
     const handler = require(`./handlers/${file}`);
@@ -42,45 +43,47 @@ for (const file of handlerFiles) {
 }
 console.log(global.styles.success(`Loaded ${handlerCount} handlers`));
 
-// این قسمت درست شد: commands تو ریشه پروژه است نه src
+// Deploy commands ONLY from root "commands" folder (your current structure)
 client.once('ready', async () => {
-  console.log(`Bot online as ${client.user.tag}`);
+  console.log(`Bot is online as ${client.user.tag}`);
 
   try {
-    console.log('Deploying commands...');
+    console.log('Deploying slash commands...');
 
     const commands = [];
-    const commandsPath = path.join(__dirname, 'commands'); // درست: تو ریشه!
+    const commandsPath = path.join(__dirname, 'commands'); // your folder is in root
 
-    const load = (dir) => {
+    const loadCommands = (dir) => {
       const items = fs.readdirSync(dir);
       for (const item of items) {
         const fullPath = path.join(dir, item);
         if (fs.statSync(fullPath).isDirectory()) {
-          load(fullPath);
+          loadCommands(fullPath);
         } else if (item.endsWith('.js')) {
           try {
-            const cmd = require(fullPath);
-            if (cmd.data?.toJSON) {
-              commands.push(cmd.data.toJSON());
-              console.log(`Added: /${cmd.data.name}`);
+            const command = require(fullPath);
+            if (command.data?.toJSON) {
+              commands.push(command.data.toJSON());
+              console.log(`Loaded command: /${command.data.name}`);
             }
           } catch (e) {
-            console.warn(`Skipped broken command: ${item}`);
+            console.warn(`Skipped broken file: ${item}`);
           }
         }
       }
     };
 
     if (fs.existsSync(commandsPath)) {
-      load(commandsPath);
+      loadCommands(commandsPath);
+
+      // This line fixes "This command is outdated"
       await client.application.commands.set(commands);
       console.log(`Successfully deployed ${commands.length} commands!`);
     } else {
-      console.log('commands folder not found in root!');
+      console.error('commands folder not found in project root!');
     }
   } catch (error) {
-    console.error('Deploy failed:', error.message);
+    console.error('Failed to deploy commands:', error.message);
   }
 });
 
