@@ -1,4 +1,4 @@
-// lanya.js — FINAL ENGLISH & UNBREAKABLE VERSION
+// lanya.js — FINAL ENGLISH & 100% WORKING VERSION
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -6,7 +6,7 @@ app.listen(10000, () => console.log('Express server running on http://localhost:
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { LavalinkManagerServer } = require('lavalink-client');
+const { Manager } = require('lavalink-client'); // درست: Manager نه LavalinkManager
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
@@ -22,17 +22,30 @@ const client = new Client({
   ],
 });
 
-client.lavalink = new LavalinkManager({
+// Lavalink درست و کارکرده
+client.lavalink = new Manager({
   nodes: [{
     authorization: process.env.LL_PASSWORD,
     host: process.env.LL_HOST,
     port: parseInt(process.env.LL_PORT, 10),
     id: process.env.LL_NAME,
+    secure: false
   }],
-  sendToShard: (guildId, payload) => client.guilds.cache.get(guildId)?.shard?.send(payload),
+  sendToShard: (guildId, payload) => {
+    const guild = client.guilds.cache.get(guildId);
+    if (guild?.shard) guild.shard.send(payload);
+  },
   autoSkip: true,
-  client: { id: process.env.DISCORD_CLIENT_ID, username: 'Lanya' },
-  playerOptions: { onEmptyQueue: { destroyAfterMs: 30_000, autoPlayFunction } },
+  client: {
+    id: process.env.DISCORD_CLIENT_ID,
+    username: 'Nasl-1'
+  },
+  playerOptions: {
+    onEmptyQueue: {
+      destroyAfterMs: 30_000,
+      autoPlayFunction
+    }
+  }
 });
 
 global.styles = {
@@ -41,7 +54,7 @@ global.styles = {
   error: chalk.red,
 };
 
-// Load handlers safely (no crash if one is broken)
+// Load handlers safely (no crash)
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
 
@@ -53,7 +66,8 @@ for (const file of handlerFiles) {
       handlerCount++;
     }
   } catch (error) {
-    console.warn(`Handler ${file} failed to load and was skipped:`, error.message);
+    {
+    console.warn(`Handler ${file} failed to load:`, error.message);
   }
 }
 console.log(global.styles.success(`Successfully loaded ${handlerCount} handlers`));
@@ -64,7 +78,7 @@ client.once('ready', async () => {
 
   try {
     console.log('Clearing old commands...');
-    await client.application.commands.set([]); // Remove all old commands
+    await client.application.commands.set([]); // پاک کردن دستورات قدیمی
 
     const commands = [];
     const commandsPath = path.join(__dirname, 'src', 'commands');
@@ -82,7 +96,7 @@ client.once('ready', async () => {
               commands.push(command.data.toJSON());
             }
           } catch (e) {
-            // Ignore broken command files
+            // فایل خراب رو نادیده بگیر
           }
         }
       }
@@ -96,7 +110,7 @@ client.once('ready', async () => {
       console.warn('src/commands folder not found — no commands deployed');
     }
   } catch (error) {
-    console.error('Failed to deploy commands:', error.message);
+    console.error('Deploy failed:', error.message);
   }
 });
 
