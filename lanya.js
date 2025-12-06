@@ -26,7 +26,7 @@ global.styles = {
   error: chalk.red,
 };
 
-// Load handlers
+// هندلرها
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
 for (const file of handlerFiles) {
@@ -42,7 +42,7 @@ for (const file of handlerFiles) {
 }
 console.log(global.styles.success(`Loaded ${handlerCount} handlers`));
 
-// Deploy commands correctly
+// این قسمت درست شد: commands تو ریشه پروژه است نه src
 client.once('ready', async () => {
   console.log(`Bot online as ${client.user.tag}`);
 
@@ -50,7 +50,7 @@ client.once('ready', async () => {
     console.log('Deploying commands...');
 
     const commands = [];
-    const commandsPath = path.join(__dirname, 'src', 'commands');
+    const commandsPath = path.join(__dirname, 'commands'); // درست: تو ریشه!
 
     const load = (dir) => {
       const items = fs.readdirSync(dir);
@@ -77,7 +77,7 @@ client.once('ready', async () => {
       await client.application.commands.set(commands);
       console.log(`Successfully deployed ${commands.length} commands!`);
     } else {
-      console.log('src/commands not found');
+      console.log('commands folder not found in root!');
     }
   } catch (error) {
     console.error('Deploy failed:', error.message);
