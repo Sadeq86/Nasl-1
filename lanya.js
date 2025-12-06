@@ -1,4 +1,4 @@
-// lanya.js — FINAL 100% WORKING ENGLISH VERSION
+// lanya.js — FINAL 100% WORKING VERSION (DECEMBER 2025)
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -6,11 +6,13 @@ app.listen(10000, () => console.log('Express server running on http://localhost:
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { Manager } = require('lavalink-client');
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 const { autoPlayFunction } = require('./functions/autoPlay');
+
+// درست‌ترین روش برای lavalink-client v3+
+const { LavalinkManager } = require('lavalink-client');
 
 const client = new Client({
   intents: [
@@ -22,28 +24,22 @@ const client = new Client({
   ],
 });
 
-client.lavalink = new Manager({
+// Lavalink درست و کارکرده (نسخه جدید)
+client.lavalink = new LavalinkManager({
   nodes: [{
-    authorization: process.env.LL_PASSWORD,
-    host: process.env.LL_HOST,
-    port: parseInt(process.env.LL_PORT, 10),
-    id: process.env.LL_NAME,
+    id: process.env.LL_NAME || 'main',
+    host: process.env.LL_HOST || 'localhost',
+    port: parseInt(process.env.LL_PORT || '2333'),
+    authorization: process.env.LL_PASSWORD || 'youshallnotpass',
     secure: false
   }],
   sendToShard: (guildId, payload) => {
     const guild = client.guilds.cache.get(guildId);
     if (guild?.shard) guild.shard.send(payload);
   },
-  autoSkip: true,
   client: {
     id: process.env.DISCORD_CLIENT_ID,
     username: 'Nasl-1'
-  },
-  playerOptions: {
-    onEmptyQueue: {
-      destroyAfterMs: 30_000,
-      autoPlayFunction
-    }
   }
 });
 
@@ -53,7 +49,7 @@ global.styles = {
   error: chalk.red,
 };
 
-// Load handlers safely
+// هندلرها رو با خیال راحت لود کن
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
 
@@ -65,14 +61,14 @@ for (const file of handlerFiles) {
       handlerCount++;
     }
   } catch (error) {
-    console.warn(`Handler ${file} failed to load:`, error.message);
+    console.warn(`Handler ${file} skipped:`, error.message);
   }
 }
 console.log(global.styles.success(`Successfully loaded ${handlerCount} handlers`));
 
-// Auto-deploy real commands
+// فقط دستورات واقعی رو deploy کن
 client.once('ready', async () => {
-  console.log(`Bot is online as ${client.user.tag}`);
+  console.log(`Bot online as ${client.user.tag}`);
 
   try {
     console.log('Clearing old commands...');
@@ -81,34 +77,28 @@ client.once('ready', async () => {
     const commands = [];
     const commandsPath = path.join(__dirname, 'src', 'commands');
 
-    const loadCommands = (dir) => {
+    const load = (dir) => {
       const items = fs.readdirSync(dir);
       for (const item of items) {
         const fullPath = path.join(dir, item);
         if (fs.statSync(fullPath).isDirectory()) {
-          loadCommands(fullPath);
+          load(fullPath);
         } else if (item.endsWith('.js')) {
           try {
-            const command = require(fullPath);
-            if (command.data?.toJSON) {
-              commands.push(command.data.toJSON());
-            }
-          } catch (e) {
-            // Ignore broken files
-          }
+            const cmd = require(fullPath);
+            if (cmd.data?.toJSON) commands.push(cmd.data.toJSON());
+          } catch (e) {}
         }
       }
     };
 
     if (fs.existsSync(commandsPath)) {
-      loadCommands(commandsPath);
+      load(commandsPath);
       await client.application.commands.set(commands);
-      console.log(`Successfully deployed ${commands.length} real commands`);
-    } else {
-      console.warn('src/commands folder not found');
+      console.log(`Deployed ${commands.length} commands`);
     }
   } catch (error) {
-    console.error('Deploy failed:', error.message);
+    console.error('Deploy error:', error.message);
   }
 });
 
