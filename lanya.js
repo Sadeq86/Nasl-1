@@ -1,3 +1,4 @@
+// lanya.js — FINAL ENGLISH & UNBREAKABLE VERSION
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -5,7 +6,7 @@ app.listen(10000, () => console.log('Express server running on http://localhost:
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { LavalinkManager } = require('lavalink-client');
+const { LavalinkManagerServer } = require('lavalink-client');
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
@@ -35,30 +36,38 @@ client.lavalink = new LavalinkManager({
 });
 
 global.styles = {
-  successColor: chalk.bold.green,
-  warningColor: chalk.bold.yellow,
-  errorColor: chalk.red,
+  success: chalk.bold.green,
+  warning: chalk.bold.yellow,
+  error: chalk.red,
 };
 
-// هندلرها
+// Load handlers safely (no crash if one is broken)
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
-let counter = 0;
-for (const file of handlerFiles) {
-  counter++;
-  require(`./handlers/${file}`)(client);
-}
-console.log(global.styles.successColor(`Successfully loaded ${counter} handlers`));
+let handlerCount = 0;
 
-// مهم‌ترین قسمت: دستورات رو درست deploy کن (فقط دستورات واقعی!)
+for (const file of handlerFiles) {
+  try {
+    const handler = require(`./handlers/${file}`);
+    if (typeof handler === 'function') {
+      handler(client);
+      handlerCount++;
+    }
+  } catch (error) {
+    console.warn(`Handler ${file} failed to load and was skipped:`, error.message);
+  }
+}
+console.log(global.styles.success(`Successfully loaded ${handlerCount} handlers`));
+
+// Auto-deploy only real commands on startup
 client.once('ready', async () => {
-  console.log(`بات روشن شد: ${client.user.tag}`);
+  console.log(`Bot is online as ${client.user.tag}`);
 
   try {
-    console.log('در حال پاک کردن دستورات قدیمی...');
-    await client.application.commands.set([]); // همه رو پاک کن
+    console.log('Clearing old commands...');
+    await client.application.commands.set([]); // Remove all old commands
 
     const commands = [];
-    const commandsPath = path.join(__dirname, 'src', 'commands'); // مسیر درست برای Render
+    const commandsPath = path.join(__dirname, 'src', 'commands');
 
     const loadCommands = (dir) => {
       const items = fs.readdirSync(dir);
@@ -73,7 +82,7 @@ client.once('ready', async () => {
               commands.push(command.data.toJSON());
             }
           } catch (e) {
-            // فایل خراب رو نادیده بگیر
+            // Ignore broken command files
           }
         }
       }
@@ -82,12 +91,12 @@ client.once('ready', async () => {
     if (fs.existsSync(commandsPath)) {
       loadCommands(commandsPath);
       await client.application.commands.set(commands);
-      console.log(`${commands.length} دستور با موفقیت deploy شد`);
+      console.log(`Successfully deployed ${commands.length} real commands`);
     } else {
-      console.log('پوشه src/commands پیدا نشد!');
+      console.warn('src/commands folder not found — no commands deployed');
     }
   } catch (error) {
-    console.error('خطا در deploy:', error.message);
+    console.error('Failed to deploy commands:', error.message);
   }
 });
 
