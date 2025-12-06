@@ -1,4 +1,4 @@
-// lanya.js — FINAL ENGLISH & 100% WORKING VERSION
+// lanya.js — FINAL 100% WORKING ENGLISH VERSION
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -6,7 +6,7 @@ app.listen(10000, () => console.log('Express server running on http://localhost:
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { Manager } = require('lavalink-client'); // درست: Manager نه LavalinkManager
+const { Manager } = require('lavalink-client');
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
@@ -22,7 +22,6 @@ const client = new Client({
   ],
 });
 
-// Lavalink درست و کارکرده
 client.lavalink = new Manager({
   nodes: [{
     authorization: process.env.LL_PASSWORD,
@@ -54,7 +53,7 @@ global.styles = {
   error: chalk.red,
 };
 
-// Load handlers safely (no crash)
+// Load handlers safely
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
 
@@ -66,19 +65,18 @@ for (const file of handlerFiles) {
       handlerCount++;
     }
   } catch (error) {
-    {
     console.warn(`Handler ${file} failed to load:`, error.message);
   }
 }
 console.log(global.styles.success(`Successfully loaded ${handlerCount} handlers`));
 
-// Auto-deploy only real commands on startup
+// Auto-deploy real commands
 client.once('ready', async () => {
   console.log(`Bot is online as ${client.user.tag}`);
 
   try {
     console.log('Clearing old commands...');
-    await client.application.commands.set([]); // پاک کردن دستورات قدیمی
+    await client.application.commands.set([]);
 
     const commands = [];
     const commandsPath = path.join(__dirname, 'src', 'commands');
@@ -96,7 +94,7 @@ client.once('ready', async () => {
               commands.push(command.data.toJSON());
             }
           } catch (e) {
-            // فایل خراب رو نادیده بگیر
+            // Ignore broken files
           }
         }
       }
@@ -107,7 +105,7 @@ client.once('ready', async () => {
       await client.application.commands.set(commands);
       console.log(`Successfully deployed ${commands.length} real commands`);
     } else {
-      console.warn('src/commands folder not found — no commands deployed');
+      console.warn('src/commands folder not found');
     }
   } catch (error) {
     console.error('Deploy failed:', error.message);
