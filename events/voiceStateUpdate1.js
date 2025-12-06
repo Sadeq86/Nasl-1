@@ -7,9 +7,9 @@ module.exports = {
   async execute(oldState, newState) {
     const guild = newState.guild || oldState.guild;
 
-    const WAITING_ROOM_ID = '1445119433344286841';
-    const TEXT_CHANNEL_ID = '1445129299014451282';
-    const CATEGORY_ID     = '1445119862765523165';
+    const WAITING_ROOM_ID = '1437117580807504033';
+    const TEXT_CHANNEL_ID = '1446884447449256137';
+    const CATEGORY_ID     = '1437140950500642927';
 
     const waitingRoom = guild.channels.cache.get(WAITING_ROOM_ID);
     const textChannel = guild.channels.cache.get(TEXT_CHANNEL_ID);
@@ -30,8 +30,8 @@ module.exports = {
     if (members.size === 8 && !pickingSession) {
       try {
         const [game1, game2] = await Promise.all([
-          guild.channels.create({ name: 'Team-1', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 }),
-          guild.channels.create({ name: 'Team-2', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 10 })
+          guild.channels.create({ name: '🎮 | Team-1', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 8 }),
+          guild.channels.create({ name: '🎮 | Team-2', type: ChannelType.GuildVoice, parent: CATEGORY_ID || null, userLimit: 8 })
         ]);
 
         const players = Array.from(members.values());
@@ -67,7 +67,7 @@ Use: \`!pick @player\`
           .setFooter({ text: 'Nasl-1 System' })
           .setTimestamp();
 
-        const msg = await textChannel.send({ content: '@here پیک شروع شد!', embeds: [embed] });
+        const msg = await textChannel.send({ content: '@here Picking Started!', embeds: [embed] });
         pickingSession.message = msg;
 
       } catch (err) {
