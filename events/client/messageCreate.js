@@ -18,7 +18,7 @@ module.exports = {
         const mentionEmbed = new EmbedBuilder()
           .setColor(0x5865f2)
           .setDescription(
-            `Hey ${message.author}, I'm Nasl 1 Family Discord Bot, I use \`/\` commands.\nCheck out my commands, type </help:${helpCommandId}>`
+            `Hey ${message.author}, I'm Nasl 1 Family Discord Bot, #1 Family In Iran. --> Join For More : [https://discord.gg/SFg3c43M](Our Discord Server)`
           )
           .setTimestamp();
 
