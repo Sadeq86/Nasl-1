@@ -21,7 +21,7 @@ module.exports = {
 
     if (!target) {
       return message.reply({ 
-        embeds: [errorEmbed('Invalid Pick', 'You must mention a player!\nExample: `!pick @Sadeq`')] 
+        embeds: [errorEmbed('Invalid Pick', 'You must mention a player!\nExample: `!pick @Player`')] 
       }).then(m => setTimeout(() => m.delete().catch(() => {}), 8000));
     }
 
