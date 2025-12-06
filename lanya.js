@@ -1,11 +1,7 @@
 const express = require('express');
 const app = express();
-app.get('/', (req, res) => {
-  res.send('Everything is up!');
-});
-app.listen(10000, () => {
-  console.log('Express server running on http://localhost:10000');
-});
+app.get('/', (req, res) => res.send('Everything is up!'));
+app.listen(10000, () => console.log('Express server running on http://localhost:10000'));
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
@@ -18,7 +14,6 @@ const { autoPlayFunction } = require('./functions/autoPlay');
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
@@ -27,84 +22,54 @@ const client = new Client({
 });
 
 client.lavalink = new LavalinkManager({
-  nodes: [
-    {
-      authorization: process.env.LL_PASSWORD,
-      host: process.env.LL_HOST,
-      port: parseInt(process.env.LL_PORT, 10),
-      id: process.env.LL_NAME,
-    },
-  ],
-  sendToShard: (guildId, payload) =>
-    client.guilds.cache.get(guildId)?.shard?.send(payload),
+  nodes: [{
+    authorization: process.env.LL_PASSWORD,
+    host: process.env.LL_HOST,
+    port: parseInt(process.env.LL_PORT, 10),
+    id: process.env.LL_NAME,
+  }],
+  sendToShard: (guildId, payload) => client.guilds.cache.get(guildId)?.shard?.send(payload),
   autoSkip: true,
-  client: {
-    id: process.env.DISCORD_CLIENT_ID,
-    username: 'Lanya',
-  },
-  playerOptions: {
-    onEmptyQueue: {
-      destroyAfterMs: 30_000,
-      autoPlayFunction: autoPlayFunction,
-    },
-  },
+  client: { id: process.env.DISCORD_CLIENT_ID, username: 'Lanya' },
+  playerOptions: { onEmptyQueue: { destroyAfterMs: 30_000, autoPlayFunction } },
 });
 
-const styles = {
+global.styles = {
   successColor: chalk.bold.green,
   warningColor: chalk.bold.yellow,
-  infoColor: chalk.bold.blue,
-  commandColor: chalk.bold.cyan,
-  userColor: chalk.bold.magenta,
   errorColor: chalk.red,
-  highlightColor: chalk.bold.hex('#FFA500'),
-  accentColor: chalk.bold.hex('#00FF7F'),
-  secondaryColor: chalk.hex('#ADD8E6'),
-  primaryColor: chalk.bold.hex('#FF1493'),
-  dividerColor: chalk.hex('#FFD700'),
 };
-global.styles = styles;
 
-const handlerFiles = fs
-  .readdirSync(path.join(__dirname, 'handlers'))
-  .filter((file) => file.endsWith('.js'));
+// هندلرها
+const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let counter = 0;
 for (const file of handlerFiles) {
-  counter += 1;
-  const handler = require(`./handlers/${file}`);
-  if (typeof handler === 'function') {
-    handler(client);
-  }
+  counter++;
+  require(`./handlers/${file}`)(client);
 }
-console.log(
-  global.styles.successColor(`Successfully loaded ${counter} handlers`)
-);
+console.log(global.styles.successColor(`Successfully loaded ${counter} handlers`));
 
-// فیکس نهایی: پاک کردن دستورات قدیمی + فقط گذاشتن دستورات واقعی
+// مهم‌ترین قسمت: دستورات رو درست deploy کن (فقط دستورات واقعی!)
 client.once('ready', async () => {
-  console.log(`Bot online as ${client.user.tag}`);
+  console.log(`بات روشن شد: ${client.user.tag}`);
 
   try {
-    console.log('Clearing old commands & deploying fresh ones...');
+    console.log('در حال پاک کردن دستورات قدیمی...');
+    await client.application.commands.set([]); // همه رو پاک کن
 
-    // همه دستورات قبلی رو از دیسکورد پاک کن
-    await client.application.commands.set([]);
-    
-    // فقط دستوراتی که الان فایلشون هست رو دوباره بذار
     const commands = [];
-    const commandsPath = path.join(__dirname, 'src', 'commands');
+    const commandsPath = path.join(__dirname, 'src', 'commands'); // مسیر درست برای Render
 
     const loadCommands = (dir) => {
-      const files = fs.readdirSync(dir);
-      for (const file of files) {
-        const filePath = path.join(dir, file);
-        const stat = fs.lstatSync(filePath);
-        if (stat.isDirectory()) {
-          loadCommands(filePath);
-        } else if (file.endsWith('.js')) {
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        const fullPath = path.join(dir, item);
+        if (fs.statSync(fullPath).isDirectory()) {
+          loadCommands(fullPath);
+        } else if (item.endsWith('.js')) {
           try {
-            const command = require(filePath);
-            if (command.data && command.data.toJSON) {
+            const command = require(fullPath);
+            if (command.data?.toJSON) {
               commands.push(command.data.toJSON());
             }
           } catch (e) {
@@ -117,14 +82,13 @@ client.once('ready', async () => {
     if (fs.existsSync(commandsPath)) {
       loadCommands(commandsPath);
       await client.application.commands.set(commands);
-      console.log(`Deployed ${commands.length} real commands. Old junk removed!`);
+      console.log(`${commands.length} دستور با موفقیت deploy شد`);
     } else {
-      console.log('commands folder not found, skipping deploy');
+      console.log('پوشه src/commands پیدا نشد!');
     }
   } catch (error) {
-    console.error('Command deploy error:', error.message);
+    console.error('خطا در deploy:', error.message);
   }
 });
 
-// لاگین آخر
 client.login(process.env.DISCORD_TOKEN);
