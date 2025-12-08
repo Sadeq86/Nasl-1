@@ -1,23 +1,23 @@
-// events/client/ready.js — FINAL 100% WORKING (بات آنلاین میشه!)
+// events/client/ready.js — FINAL 100% ONLINE (بات آنلاین میشه!)
 const { ActivityType } = require('discord.js');
 
 module.exports = {
   name: 'ready',
   once: true,
   execute(client) {
-    // این خط حتماً باید باشه!
-    console.log(`✅ Bot is ONLINE as ${client.user.tag}`);
+    // این خط حتماً باید باشه تا تو لاگ ببینی
+    console.log(`BOT IS 100% ONLINE as ${client.user.tag} — Nasl-1 is ALIVE!`);
 
     // استاتوس خفن
-    const updateStatus = () => {
-      const total = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
+    const update = () => {
+      const total = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
       client.user.setActivity(`${total.toLocaleString()} In Nasl-1`, {
         type: ActivityType.Streaming,
         url: "https://twitch.tv/nasl1"
       });
     };
-    updateStatus();
-    setInterval(updateStatus, 60000);
+    update();
+    setInterval(update, 60000);
 
     // Lavalink
     if (client.lavalink) {
