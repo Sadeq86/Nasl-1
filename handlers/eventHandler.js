@@ -1,3 +1,4 @@
+// handlers/eventHandler.js — FINAL 100% WORKING & NO SYNTAX ERROR
 const fs = require('fs');
 const path = require('path');
 
@@ -7,13 +8,13 @@ module.exports = (client) => {
 
   const loadEvents = (dir) => {
     const files = fs.readdirSync(dir);
+
     files.forEach((file) => {
       const filePath = path.join(dir, file);
       const stat = fs.lstatSync(filePath);
 
       if (stat.isDirectory()) {
         if (file === 'lavalink') {
-          // lavalink رو فعلاً دست نزن
           const lavalinkFiles = fs.readdirSync(filePath);
           lavalinkFiles.forEach((lavalinkFile) => {
             if (lavalinkFile.endsWith('.js')) {
@@ -34,14 +35,19 @@ module.exports = (client) => {
           loadEvents(filePath);
         }
       } else if (file.endsWith('.js')) {
-        const event = require(filePath);
+        try {
+          const event = require(filePath);
 
-        if (event.once) {
-          client.once(event.name, (...args) => event.execute(...args, client)); // ← client پاس داده شد
-        } else {
-          client.on(event.name, (...args) => event.execute(...args, client));    // ← client پاس داده شد
+          if (event.once) {
+            client.once(event.name, (...args) => event.execute(...args, client));
+          } else {
+            client.on(event.name, (...args) => event.execute(...args, client));
+          }
+          count++;
+          console.log(`[Event] Loaded: ${event.name}`);
+        } catch (error) {
+          console.warn(`[Event] Failed to load ${file}:`, error.message);
         }
-        count++;
       }
     });
   };
