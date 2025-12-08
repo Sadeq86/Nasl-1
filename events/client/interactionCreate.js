@@ -12,7 +12,7 @@ module.exports = {
         await command.execute(interaction);
       } catch (error) {
         console.error('Command error:', error);
-        const reply = { content: 'خطایی رخ داد!', ephemeral: true };
+        const reply = { content: 'There is a problem.', ephemeral: true };
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp(reply).catch(() => {});
         } else {
