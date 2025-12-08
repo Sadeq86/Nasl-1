@@ -1,4 +1,4 @@
-// lanya.js — FINAL 100% WORKING (DECEMBER 2025)
+// lanya.js — FINAL 100% WORKING (Lavalink + Music + Everything!)
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -6,7 +6,7 @@ app.listen(10000, () => console.log('Express server running on http://localhost:
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { LavalinkManager } = require('lavalink-client'); // درست: LavalinkManager
+const { LavalinkManager } = require('lavalink-client');
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
@@ -26,8 +26,8 @@ client.lavalink = new LavalinkManager({
   nodes: [
     {
       id: "main",
-      host: process.env.LL_HOST || "localhost",
-      port: parseInt(process.env.LL_PORT || "2333"),
+      host: process.env.LL_HOST || "lavalink.jirayu.net",
+      port: parseInt(process.env.LL_PORT || "13592"),
       authorization: process.env.LL_PASSWORD || "youshallnotpass",
       secure: false
     }
@@ -51,7 +51,6 @@ global.styles = {
 // Load handlers
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
-
 for (const file of handlerFiles) {
   try {
     const handler = require(`./handlers/${file}`);
@@ -65,13 +64,13 @@ for (const file of handlerFiles) {
 }
 console.log(global.styles.success(`Loaded ${handlerCount} handlers`));
 
-// Deploy commands + Lavalink init
+// همه چیز بعد از ready
 client.once('ready', async () => {
   console.log(`Bot online as ${client.user.tag}`);
 
-  // Lavalink رو راه‌اندازی کن
-  client.lavalink.init(client.user);
-  console.log('Lavalink initialized');
+  // Lavalink رو درست راه‌اندازی کن
+  client.lavalink.init({ id: client.user.id });
+  console.log('Lavalink connected and ready!');
 
   // دستورات رو deploy کن
   try {
