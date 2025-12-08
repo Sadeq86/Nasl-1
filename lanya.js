@@ -1,4 +1,4 @@
-// lanya.js — FINAL 100% WORKING & NEVER CRASHES
+// lanya.js — FINAL 100% ONLINE — NO MORE READY.JS NEEDED
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Nasl-1 is alive!'));
@@ -32,35 +32,36 @@ client.lavalink = new LavalinkManager({
 fs.readdirSync(path.join(__dirname, 'handlers'))
   .filter(f => f.endsWith('.js'))
   .forEach(file => {
-    try {
-      require(`./handlers/${file}`)(client);
-    } catch (e) {
-      console.warn(`Handler ${file} failed to load`);
-    }
+    try { require(`./handlers/${file}`)(client); } 
+    catch (e) { console.warn(`Handler ${file} failed`); }
   });
 
-console.log(chalk.green('All handlers loaded'));
+console.log(chalk.green('All handlers & events loaded'));
 
-// READY — این قسمت بات رو ۱۰۰٪ آنلاین نگه می‌داره
-client.on('ready', () => {
-  console.log(`BOT IS 100% ONLINE as ${client.user.tag}`);
+// READY — همه چیز اینجا!
+client.once('ready', (c) => {
+  console.log(`BOT IS 100% ONLINE as ${c.user.tag} — Nasl-1 is ALIVE!`);
 
-  client.lavalink.init({ id: client.user.id });
+  // Lavalink init
+  client.lavalink.init({ id: c.user.id });
   console.log('Lavalink connected');
 
-  const updateStatus = () => {
+  // Status
+  const update = () => {
     const total = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
-    client.user.setActivity(`${total.toLocaleString()} In Nasl-1`, {
+    c.user.setActivity(`${total.toLocaleString()} In Nasl-1`, {
       type: ActivityType.Streaming,
       url: "https://twitch.tv/nasl1"
     });
   };
-  updateStatus();
-  setInterval(updateStatus, 60000);
+  update();
+  setInterval(update, 60000);
 });
 
-// این خط آخر باشه — هیچ چیزی بعدش نباشه!
-client.login(process.env.DISCORD_TOKEN).catch(err => {
-  console.error('Login failed:', err);
-  process.exit(1);
-});
+// Login — آخرین خط!
+client.login(process.env.DISCORD_TOKEN)
+  .then(() => console.log('Logged in successfully'))
+  .catch(err => {
+    console.error('Login failed:', err);
+    process.exit(1);
+  });
