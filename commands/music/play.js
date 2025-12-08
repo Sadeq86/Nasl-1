@@ -1,11 +1,14 @@
-// commands/music/play.js — FINAL 100% WORKING (lavalink-client v3+)
+
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { formatTime } = require('../../utils/utils');
+
+const autocompleteMap = new Map();
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Play a song or playlist from different sources')
+    .setDescription('Play a song or playlist from different Sources')
+
     .addStringOption((option) =>
       option
         .setName('query')
@@ -16,138 +19,225 @@ module.exports = {
     .addStringOption((option) =>
       option
         .setName('source')
-        .setDescription('The source to search from')
+        .setDescription('The source you want to play the music from')
         .addChoices(
-          { name: 'YouTube', value: 'ytsearch' },
-          { name: 'YouTube Music', value: 'ytmsearch' },
+          { name: 'Youtube', value: 'ytsearch' },
+          { name: 'Youtube Music', value: 'ytmsearch' },
           { name: 'Spotify', value: 'spsearch' },
-          { name: 'SoundCloud', value: 'scsearch' },
+          { name: 'Soundcloud', value: 'scsearch' },
           { name: 'Deezer', value: 'dzsearch' }
         )
     ),
 
-  // Autocomplete
   async autocomplete(interaction) {
-    const query = interaction.options.getFocused();
-    const member = interaction.member;
-
-    if (!member?.voice?.channel) {
-      return interaction.respond([{ name: 'Join a voice channel first!', value: 'join_vc' }]);
-    }
-
-    if (!query.trim()) {
-      return interaction.respond([{ name: 'Start typing to search...', value: 'start_typing' }]);
-    }
-
-    const source = interaction.options.getString('source') || 'ytsearch';
-
     try {
-      const lavalink = interaction.client.lavalink;
-      if (!lavalink?.manager) {
-        return interaction.respond([{ name: 'Lavalink is not ready yet...', value: 'lavalink_error' }]);
+      const query = interaction.options.getFocused();
+      const member = interaction.member;
+      if (!member.voice.channel) {
+        return await interaction.respond([
+          {
+            name: '⚠️ Join a voice channel first!',
+            value: 'join_vc',
+          },
+        ]);
+      }
+      if (!query.trim()) {
+        return await interaction.respond([
+          {
+            name: 'Start typing to search for songs...',
+            value: 'start_typing',
+          },
+        ]);
       }
 
-      const result = await lavalink.manager.search({ query, source });
+      const source = 'spsearch';
 
-      if (!result?.tracks?.length) {
-        return interaction.respond([{ name: 'No results found', value: 'no_results' }]);
+      player = interaction.client.lavalink.createPlayer({
+        guildId: interaction.guildId,
+        textChannelId: interaction.channelId,
+        voiceChannelId: interaction.member.voice.channel.id,
+        selfDeaf: true,
+      });
+
+      try {
+        const results = await player.search({ query, source });
+
+        if (!results?.tracks?.length) {
+          return await interaction.respond([
+            { name: 'No results found', value: 'no_results' },
+          ]);
+        }
+
+        let options = [];
+
+        if (results.loadType === 'playlist') {
+          options = [
+            {
+              name: `📑 Playlist: ${results.playlist?.title || 'Unknown'} (${results.tracks.length} tracks)`,
+              value: `${query}`,
+            },
+          ];
+        } else {
+          options = results.tracks.slice(0, 25).map((track) => ({
+            name: `${track.info.title} - ${track.info.author}`,
+            value: track.info.uri,
+          }));
+        }
+
+        return await interaction.respond(options);
+      } catch (searchError) {
+        console.error('Search error:', searchError);
+        return await interaction.respond([
+          { name: 'Error searching for tracks', value: 'error' },
+        ]);
       }
-
-      const options = result.tracks.slice(0, 25).map((track) => ({
-        name: `${track.info.title} - ${track.info.author}`.slice(0, 100),
-        value: track.info.uri,
-      }));
-
-      await interaction.respond(options);
     } catch (error) {
-      console.error('Autocomplete error:', error.message);
-      await interaction.respond([{ name: 'Search error', value: 'error' }]);
+      console.error('Autocomplete error:', error);
+      return await interaction.respond([
+        { name: 'An error occurred', value: 'error' },
+      ]);
     }
   },
 
-  // Execute command
   async execute(interaction) {
+    const client = interaction.client;
+    const query = interaction.options.getString('query');
     const member = interaction.member;
-    if (!member?.voice?.channel) {
-      return interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
+    const source = interaction.options.getString('source') || 'spsearch';
+
+    if (query === 'join_vc' || query === 'start_typing' || query === 'error') {
+      return interaction.reply({
+        content: '❌ Please join a voice channel and select a valid song!',
+        ephemeral: true,
+      });
     }
+
+    if (query === 'no_results') {
+      return interaction.reply({
+        content: '❌ No results found! Try a different search term.',
+        ephemeral: true,
+      });
+    }
+
+    if (!member.voice.channel) {
+      return interaction.reply({
+        content: '❌ You need to join a voice channel first!',
+        ephemeral: true,
+      });
+    }
+
+    let player = client.lavalink.players.get(interaction.guild.id);
+    if (!player) {
+      player = client.lavalink.createPlayer({
+        guildId: interaction.guild.id,
+        voiceChannelId: member.voice.channel.id,
+        textChannelId: interaction.channel.id,
+        selfDeaf: true,
+      });
+    }
+    await player.connect();
 
     await interaction.deferReply();
 
-    const query = interaction.options.getString('query').value;
-    const source = interaction.options.getString('source') || 'ytsearch';
+    if (query.startsWith('playlist_')) {
+      const actualQuery = query.replace('playlist_', '');
+      search = await player.search({ query: actualQuery, source });
+    } else {
+      const isURL = query.startsWith('http://') || query.startsWith('https://');
+      search = await player.search({ query, source });
+    }
 
-    try {
-      const lavalink = interaction.client.lavalink;
-      if (!lavalink?.manager) {
-        return interaction.editReply({ content: 'Lavalink is not connected!' });
+    if (!search?.tracks?.length) {
+      return interaction.editReply({
+        content: '❌ No results found! Try a different search term.',
+        ephemeral: true,
+      });
+    }
+
+    if (search.loadType === 'playlist') {
+      for (const track of search.tracks) {
+        track.userData = { requester: interaction.member };
+        await player.queue.add(track);
       }
 
-      // Get or create player
-      let player = lavalink.manager.get(interaction.guild.id);
-
-      if (!player) {
-        player = lavalink.manager.create({
-          guildId: interaction.guild.id,
-          voiceChannelId: member.voice.channel.id,
-          textChannelId: interaction.channel.id,
-          selfDeaf: true,
-          selfMute: false
-        });
-
-        await player.connect();
-      }
-
-      const result = await player.search({ query, source });
-
-      if (result.loadType === 'LOAD_FAILED') {
-        return interaction.editReply({ content: 'Failed to load track.' });
-      }
-
-      if (result.loadType === 'NO_MATCHES') {
-        return interaction.editReply({ content: 'No results found.' });
-      }
-
-      // Playlist
-      if (result.loadType === 'PLAYLIST_LOADED') {
-        const tracks = result.tracks.map(t => ({ ...t, requester: interaction.user }));
-        player.queue.add(tracks);
-
-        const embed = new EmbedBuilder()
-          .setColor('#00ff00')
-          .setTitle('Playlist Added')
-          .setDescription(`**${result.playlistInfo.name}**\n${tracks.length} tracks added to queue`)
-          .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
-          .setTimestamp();
-
-        if (!player.playing) await player.play();
-        return interaction.editReply({ embeds: [embed] });
-      }
-
-      // Single track
-      const track = { ...result.tracks[0], requester: interaction.user };
-      player.queue.add(track);
-
-      const embed = new EmbedBuilder()
-        .setColor('#00ff00')
-        .setTitle('Track Added')
-        .setDescription(`[${track.info.title}](${track.info.uri})`)
-        .addFields(
-          { name: 'Artist', value: track.info.author, inline: true },
-          { name: 'Duration', value: formatTime(track.info.duration), inline: true },
-          { name: 'Queue Position', value: `#${player.queue.size}`, inline: true }
+      const playlistEmbed = new EmbedBuilder()
+        .setColor('#DDA0DD')
+        .setAuthor({
+          name: 'Added Playlist to Queue 📃',
+          iconURL: client.user.displayAvatarURL(),
+        })
+        .setTitle(search.playlist?.title)
+        .setThumbnail(search.tracks[0].info.artworkUrl)
+        .setDescription(
+          `Added \`${search.tracks.length}\` tracks from playlist\n\n` +
+            `**First Track:** [${search.tracks[0].info.title}](${search.tracks[0].info.uri})\n` +
+            `**Last Track:** [${search.tracks[search.tracks.length - 1].info.title}](${search.tracks[search.tracks.length - 1].info.uri})`
         )
-        .setThumbnail(track.info.artworkUrl || null)
-        .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
+        .addFields([
+          {
+            name: '👤 Playlist Author',
+            value: `\`${search.tracks[0].info.author}\``,
+            inline: true,
+          },
+          {
+            name: '⌛ Total Duration',
+            value: `\`${formatTime(search.tracks.reduce((acc, track) => acc + track.info.duration, 0))}\``,
+            inline: true,
+          },
+        ])
+        .setFooter({
+          text: `Added by ${interaction.user.tag} • Queue position: #${player.queue.tracks.length - search.tracks.length + 1}`,
+          iconURL: interaction.user.displayAvatarURL(),
+        })
         .setTimestamp();
 
-      if (!player.playing) await player.play();
+      if (!player.playing) {
+        await player.play();
+      }
 
-      await interaction.editReply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [playlistEmbed] });
+    } else {
+      const track = search.tracks[0];
+      track.userData = { requester: interaction.member };
+      await player.queue.add(track);
 
-    } catch (error) {
-      console.error('Play command error:', error);
-      await interaction.editReply({ content: 'An error occurred while playing the song.' }).catch(() => {});
+      const trackEmbed = new EmbedBuilder()
+        .setColor('#DDA0DD')
+        .setAuthor({
+          name: 'Added to Queue 🎵',
+          iconURL: client.user.displayAvatarURL(),
+        })
+        .setTitle(track.info.title)
+        .setURL(track.info.uri)
+        .setThumbnail(track.info.artworkUrl)
+        .addFields([
+          {
+            name: '👤 Artist',
+            value: `\`${track.info.author}\``,
+            inline: true,
+          },
+          {
+            name: '⌛ Duration',
+            value: `\`${formatTime(track.info.duration)}\``,
+            inline: true,
+          },
+          {
+            name: '🎧 Position in Queue',
+            value: `\`#${player.queue.tracks.length}\``,
+            inline: true,
+          },
+        ])
+        .setFooter({
+          text: `Added by ${interaction.user.tag}`,
+          iconURL: interaction.user.displayAvatarURL(),
+        })
+        .setTimestamp();
+
+      if (!player.playing) {
+        await player.play();
+      }
+
+      return interaction.editReply({ embeds: [trackEmbed] });
     }
   },
 };
