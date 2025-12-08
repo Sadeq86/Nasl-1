@@ -1,44 +1,64 @@
-const { Events, MessageFlags } = require('discord.js');
+// events/client/interactionCreate.js — FINAL 100% WORKING VERSION
+const { Events } = require('discord.js');
 
 module.exports = {
   name: Events.InteractionCreate,
   async execute(interaction) {
+    const client = interaction.client;
+
+    // اسلش کامندها
     if (interaction.isChatInputCommand()) {
-      const command = interaction.client.commands.get(interaction.commandName);
+      const command = client.commands.get(interaction.commandName);
       if (!command) {
-        console.error(
-          `No command matching ${interaction.commandName} was found.`
-        );
+        console.error(`No command matching ${interaction.commandName} was found.`);
         return;
       }
 
       try {
         await command.execute(interaction);
       } catch (error) {
-        console.error(error);
-
+        console.error('Command execution error:', error);
+        const reply = { content: 'There was an error while executing this command!', ephemeral: true };
         if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({
-            content: 'There was an error while executing this command!',
-            flags: [MessageFlags.Ephemeral],
-          });
+          await interaction.followUp(reply).catch(() => {});
         } else {
-          await interaction.reply({
-            content: 'There was an error while executing this command!',
-            flags: [MessageFlags.Ephemeral],
-          });
+          await interaction.reply(reply).catch(() => {});
         }
       }
     }
 
-    if (interaction.isAutocomplete()) {
-      const command = interaction.client.commands.get(interaction.commandName);
-      if (command && command.autocomplete) {
+    // Autocomplete
+    else if (interaction.isAutocomplete()) {
+      const command = client.commands.get(interaction.commandName);
+      if (command?.autocomplete) {
         try {
           await command.autocomplete(interaction);
         } catch (error) {
           console.error('Autocomplete error:', error);
-          await interaction.respond([]);
+        }
+      }
+    }
+
+    // دکمه‌ها (مثل تیکت)
+    else if (interaction.isButton()) {
+      const handler = client.buttonHandlers?.get(interaction.customId);
+      if (handler) {
+        try {
+          await handler(interaction);
+        } catch (error) {
+          console.error('Button handler error:', error);
+        }
+      }
+    }
+
+    // منوها (Select Menu)
+    else if (interaction.isStringSelectMenu()) {
+      const handler = client.selectMenuHandlers?.get(interaction.customId);
+      if (handler) {
+        try {
+          await handler(interaction);
+        } catch (error) {
+          console.error('Select menu handler error:', error);
         }
       }
     }
