@@ -1,46 +1,36 @@
-const { Events, MessageFlags } = require('discord.js');
+// events/client/interactionCreate.js — FINAL CLEAN VERSION
+const { Events } = require('discord.js');
 
 module.exports = {
   name: Events.InteractionCreate,
   async execute(interaction) {
+    // Slash Commands
     if (interaction.isChatInputCommand()) {
       const command = interaction.client.commands.get(interaction.commandName);
-      if (!command) {
-        console.error(
-          `No command matching ${interaction.commandName} was found.`
-        );
-        return;
-      }
+      if (!command) return;
 
       try {
         await command.execute(interaction);
       } catch (error) {
-        console.error(error);
-
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({
-            content: 'There was an error while executing this command!',
-            flags: [MessageFlags.Ephemeral],
-          });
-        } else {
-          await interaction.reply({
-            content: 'There was an error while executing this command!',
-            flags: [MessageFlags.Ephemeral],
-          });
+        console.error('Command error:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: 'An error occurred!', ephemeral: true }).catch(() => {});
         }
       }
+      return;
     }
 
+    // Autocomplete
     if (interaction.isAutocomplete()) {
       const command = interaction.client.commands.get(interaction.commandName);
-      if (command && command.autocomplete) {
+      if (command?.autocomplete) {
         try {
           await command.autocomplete(interaction);
         } catch (error) {
           console.error('Autocomplete error:', error);
-          await interaction.respond([]);
         }
       }
+      return;
     }
-  },
+  }
 };
