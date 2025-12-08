@@ -1,4 +1,4 @@
-// lanya.js — FINAL 100% WORKING & CLEAN (2025)
+// lanya.js — FINAL 100% WORKING ENGLISH VERSION (DECEMBER 2025)
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -21,14 +21,14 @@ const client = new Client({
   ],
 });
 
-// Lavalink setup
+// Lavalink setup — using lavalink.jirayu.net
 client.lavalink = new LavalinkManager({
   nodes: [
     {
       id: "main",
-      host: process.env.LL_HOST || "lavalink.jirayu.net",
-      port: parseInt(process.env.LL_PORT || "13592"),
-      authorization: process.env.LL_PASSWORD || "youshallnotpass",
+      host: "lavalink.jirayu.net",
+      port: 13592,
+      authorization: "youshallnotpass",
       secure: false
     }
   ],
@@ -51,6 +51,7 @@ global.styles = {
 // Load handlers safely
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
+
 for (const file of handlerFiles) {
   try {
     const handler = require(`./handlers/${file}`);
@@ -59,33 +60,34 @@ for (const file of handlerFiles) {
       handlerCount++;
     }
   } catch (error) {
-    console.warn(`Handler ${file} skipped:`, error.message);
+    console.warn(`Handler ${file} failed:`, error.message);
   }
 }
 console.log(global.styles.success(`Loaded ${handlerCount} handlers`));
 
-// Everything after ready
+// Everything after bot is ready
 client.once('ready', async () => {
-  console.log(`Bot online as ${client.user.tag}`);
+  console.log(`Bot is online as ${client.user.tag}`);
 
-  // Lavalink init
+  // Initialize Lavalink
   client.lavalink.init({ id: client.user.id });
   console.log('Lavalink connected and ready!');
 
-  // Status with member count + Watch button
+  // Status: Streaming + member count + Watch button
   const updateStatus = () => {
     const totalMembers = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
     client.user.setPresence({
       activities: [{
         name: `${totalMembers.toLocaleString()} In Nasl-1`,
         type: ActivityType.Streaming,
-        url: "https://discord.gg/8QH5N4B8" // می‌تونی هر لینکی بذاری
+        url: "https://discord.gg/SFg3c43M"
       }],
       status: 'idle'
     });
   };
   updateStatus();
-  setInterval(updateStatus, 60000); // هر دقیقه آپدیت شه
+  setInterval(updateStatus, 60000);
+  console.log('Status set: Streaming + member count');
 
   // Deploy commands
   try {
@@ -93,12 +95,12 @@ client.once('ready', async () => {
     const commands = [];
     const commandsPath = path.join(__dirname, 'commands');
 
-    const load = (dir) => {
+    const loadCommands = (dir) => {
       const items = fs.readdirSync(dir);
       for (const item of items) {
         const fullPath = path.join(dir, item);
         if (fs.statSync(fullPath).isDirectory()) {
-          load(fullPath);
+          loadCommands(fullPath);
         } else if (item.endsWith('.js')) {
           try {
             const cmd = require(fullPath);
@@ -106,16 +108,16 @@ client.once('ready', async () => {
               commands.push(cmd.data.toJSON());
             }
           } catch (e) {
-            console.warn(`Broken command: ${item}`);
+            console.warn(`Skipped broken command: ${item}`);
           }
         }
       }
     };
 
     if (fs.existsSync(commandsPath)) {
-      load(commandsPath);
+      loadCommands(commandsPath);
       await client.application.commands.set(commands);
-      console.log(`Deployed ${commands.length} commands`);
+      console.log(`Successfully deployed ${commands.length} commands`);
     } else {
       console.log('commands folder not found');
     }
