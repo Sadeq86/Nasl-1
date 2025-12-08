@@ -34,7 +34,7 @@ module.exports = {
         .setName('limit')
         .setDescription('Maximum tickets per user')
         .setMinValue(1)
-        .setMaxValue(10)
+        .setMaxValue(100000)
         .setRequired(false)
     ),
 
