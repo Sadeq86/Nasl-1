@@ -1,20 +1,25 @@
-// lanya.js — FINAL 100% ONLINE VERSION (بات قطعاً روشن میشه)
 const express = require('express');
 const app = express();
-app.get('/', (req, res) => res.send('Nasl-1 is alive!'));
-app.listen(10000, () => console.log('Express running on 10000'));
 
+app.get('/', (req, res) => {
+  res.send('Everything is up!');
+});
+
+app.listen(10000, () => {
+  console.log('✅ Express server running on http://localhost:10000');
+});
 require('dotenv').config();
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 const { LavalinkManager } = require('lavalink-client');
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
-const mongoose = require('mongoose');
+const { autoPlayFunction } = require('./functions/autoPlay');
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
@@ -22,42 +27,58 @@ const client = new Client({
   ],
 });
 
-// Lavalink
 client.lavalink = new LavalinkManager({
-  nodes: [{ id: "main", host: "lavalink.jirayu.net", port: 13592, authorization: "youshallnotpass", secure: false }],
-  sendToShard: () => {},
-  client: { id: process.env.DISCORD_CLIENT_ID, username: "Nasl-1" }
+  nodes: [
+    {
+      authorization: process.env.LL_PASSWORD,
+      host: process.env.LL_HOST,
+      port: parseInt(process.env.LL_PORT, 10),
+      id: process.env.LL_NAME,
+    },
+  ],
+  sendToShard: (guildId, payload) =>
+    client.guilds.cache.get(guildId)?.shard?.send(payload),
+  autoSkip: true,
+  client: {
+    id: process.env.DISCORD_CLIENT_ID,
+    username: 'Lanya',
+  },
+  playerOptions: {
+    onEmptyQueue: {
+      destroyAfterMs: 30_000,
+      autoPlayFunction: autoPlayFunction,
+    },
+  },
 });
 
-global.styles = { success: chalk.bold.green };
+const styles = {
+  successColor: chalk.bold.green,
+  warningColor: chalk.bold.yellow,
+  infoColor: chalk.bold.blue,
+  commandColor: chalk.bold.cyan,
+  userColor: chalk.bold.magenta,
+  errorColor: chalk.red,
+  highlightColor: chalk.bold.hex('#FFA500'),
+  accentColor: chalk.bold.hex('#00FF7F'),
+  secondaryColor: chalk.hex('#ADD8E6'),
+  primaryColor: chalk.bold.hex('#FF1493'),
+  dividerColor: chalk.hex('#FFD700'),
+};
 
-// Load handlers
-fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js')).forEach(file => {
-  try {
-    require(`./handlers/${file}`)(client);
-  } catch (e) { console.warn(`Handler ${file} failed`); }
-});
+global.styles = styles;
 
-console.log(global.styles.success('All handlers loaded'));
-
-// READY — این قسمت بات رو آنلاین نگه می‌داره
-client.once('ready', () => {
-  console.log(`Bot is ONLINE as ${client.user.tag}`);
-
-  client.lavalink.init({ id: client.user.id });
-  console.log('Lavalink ready');
-
-  // استاتوس
-  const update = () => {
-    const members = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
-    client.user.setActivity(`${members.toLocaleString()} In Nasl-1`, { type: ActivityType.Streaming, url: "https://discord.gg/SFg3c43M" });
-  };
-  update();
-  setInterval(update, 60000);
-
-  // مانگویی
-  mongoose.connect(process.env.MONGODB_URI).then(() => console.log('MongoDB Connected')).catch(() => {});
-});
-
-// این خط آخر باشه — هیچ چیزی بعدش نباشه!
+const handlerFiles = fs
+  .readdirSync(path.join(__dirname, 'handlers'))
+  .filter((file) => file.endsWith('.js'));
+let counter = 0;
+for (const file of handlerFiles) {
+  counter += 1;
+  const handler = require(`./handlers/${file}`);
+  if (typeof handler === 'function') {
+    handler(client);
+  }
+}
+console.log(
+  global.styles.successColor(`✅ Successfully loaded ${counter} handlers`)
+);
 client.login(process.env.DISCORD_TOKEN);
