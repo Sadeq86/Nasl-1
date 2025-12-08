@@ -29,18 +29,11 @@ module.exports = {
     setInterval(updateActivity, 30000);
 
     // Connect to MongoDB only if not already connected
-    if (mongoose.connection.readyState !== 1) {
-      try {
-        await mongoose.connect(process.env.MONGODB_URI, {
-          useNewUrlParser: true,
-          useUnifiedTopology: true
-        });
-        console.log('MongoDB Connected Successfully');
-      } catch (error) {
-        console.error('MongoDB Connection Failed:', error.message);
-      }
-    } else {
-      console.log('MongoDB Already Connected');
-    }
-  }
-};
+    const mongoose = require("mongoose");
+
+mongoose.connect("mongodb+srv://dexalith85_db_user:nasl1_85@nasl1.bo9txyi.mongodb.net/?appName=Nasl1", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log("Mongo Connected"))
+.catch(err => console.log(err));
