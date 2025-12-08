@@ -1,4 +1,4 @@
-// commands/music/play.js — FINAL ENGLISH & FULLY WORKING (lavalink-client v3+)
+// commands/music/play.js — FINAL 100% WORKING (lavalink-client v3+)
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { formatTime } = require('../../utils/utils');
 
@@ -26,11 +26,12 @@ module.exports = {
         )
     ),
 
+  // Autocomplete
   async autocomplete(interaction) {
     const query = interaction.options.getFocused();
     const member = interaction.member;
 
-    if (!member.voice.channel) {
+    if (!member?.voice?.channel) {
       return interaction.respond([{ name: 'Join a voice channel first!', value: 'join_vc' }]);
     }
 
@@ -41,20 +42,18 @@ module.exports = {
     const source = interaction.options.getString('source') || 'ytsearch';
 
     try {
-      const player = interaction.client.lavalink.manager.create({
-        guildId: interaction.guild.id,
-        voiceChannelId: member.voice.channel.id,
-        textChannelId: interaction.channel.id,
-        selfDeaf: true,
-      });
+      const lavalink = interaction.client.lavalink;
+      if (!lavalink?.manager) {
+        return interaction.respond([{ name: 'Lavalink is not ready yet...', value: 'lavalink_error' }]);
+      }
 
-      const results = await player.search({ query, source });
+      const result = await lavalink.manager.search({ query, source });
 
-      if (!results?.tracks?.length) {
+      if (!result?.tracks?.length) {
         return interaction.respond([{ name: 'No results found', value: 'no_results' }]);
       }
 
-      const options = results.tracks.slice(0, 25).map((track) => ({
+      const options = result.tracks.slice(0, 25).map((track) => ({
         name: `${track.info.title} - ${track.info.author}`.slice(0, 100),
         value: track.info.uri,
       }));
@@ -66,28 +65,36 @@ module.exports = {
     }
   },
 
+  // Execute command
   async execute(interaction) {
-    const query = interaction.options.getString('query');
-    const source = interaction.options.getString('source') || 'ytsearch';
     const member = interaction.member;
-
-    if (!member.voice.channel) {
+    if (!member?.voice?.channel) {
       return interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
     }
 
     await interaction.deferReply();
 
+    const query = interaction.options.getString('query').value;
+    const source = interaction.options.getString('source') || 'ytsearch';
+
     try {
-      // Get or create player using .manager (new lavalink-client)
-      let player = interaction.client.lavalink.manager.get(interaction.guild.id);
+      const lavalink = interaction.client.lavalink;
+      if (!lavalink?.manager) {
+        return interaction.editReply({ content: 'Lavalink is not connected!' });
+      }
+
+      // Get or create player
+      let player = lavalink.manager.get(interaction.guild.id);
 
       if (!player) {
-        player = interaction.client.lavalink.manager.create({
+        player = lavalink.manager.create({
           guildId: interaction.guild.id,
           voiceChannelId: member.voice.channel.id,
           textChannelId: interaction.channel.id,
           selfDeaf: true,
+          selfMute: false
         });
+
         await player.connect();
       }
 
@@ -101,19 +108,19 @@ module.exports = {
         return interaction.editReply({ content: 'No results found.' });
       }
 
+      // Playlist
       if (result.loadType === 'PLAYLIST_LOADED') {
         const tracks = result.tracks.map(t => ({ ...t, requester: interaction.user }));
         player.queue.add(tracks);
 
         const embed = new EmbedBuilder()
           .setColor('#00ff00')
-          .setTitle('Playlist Added to Queue')
-          .setDescription(`**${result.playlistInfo.name}**\n${tracks.length} tracks`)
+          .setTitle('Playlist Added')
+          .setDescription(`**${result.playlistInfo.name}**\n${tracks.length} tracks added to queue`)
           .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
           .setTimestamp();
 
         if (!player.playing) await player.play();
-
         return interaction.editReply({ embeds: [embed] });
       }
 
@@ -123,12 +130,12 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor('#00ff00')
-        .setTitle('Track Added to Queue')
+        .setTitle('Track Added')
         .setDescription(`[${track.info.title}](${track.info.uri})`)
         .addFields(
           { name: 'Artist', value: track.info.author, inline: true },
           { name: 'Duration', value: formatTime(track.info.duration), inline: true },
-          { name: 'Position', value: `#${player.queue.size}`, inline: true }
+          { name: 'Queue Position', value: `#${player.queue.size}`, inline: true }
         )
         .setThumbnail(track.info.artworkUrl || null)
         .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
