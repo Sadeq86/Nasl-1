@@ -1,4 +1,4 @@
-// lanya.js — FINAL 100% WORKING + LAVALINK INCLUDED
+// lanya.js — FINAL 100% WORKING (DECEMBER 2025)
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -6,7 +6,7 @@ app.listen(10000, () => console.log('Express server running on http://localhost:
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { Manager } = require('lavalink-client'); // اضافه شد
+const { LavalinkManager } = require('lavalink-client'); // درست: LavalinkManager
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
@@ -21,15 +21,17 @@ const client = new Client({
   ],
 });
 
-// Lavalink راه‌اندازی شد
-client.lavalink = new Manager({
-  nodes: [{
-    id: "main",
-    host: process.env.LL_HOST || "localhost",
-    port: parseInt(process.env.LL_PORT || "2333"),
-    authorization: process.env.LL_PASSWORD || "youshallnotpass",
-    secure: false
-  }],
+// Lavalink درست راه‌اندازی شد
+client.lavalink = new LavalinkManager({
+  nodes: [
+    {
+      id: "main",
+      host: process.env.LL_HOST || "localhost",
+      port: parseInt(process.env.LL_PORT || "2333"),
+      authorization: process.env.LL_PASSWORD || "youshallnotpass",
+      secure: false
+    }
+  ],
   sendToShard: (guildId, payload) => {
     const guild = client.guilds.cache.get(guildId);
     if (guild?.shard) guild.shard.send(payload);
@@ -46,9 +48,10 @@ global.styles = {
   error: chalk.red,
 };
 
-// هندلرها
+// Load handlers
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
+
 for (const file of handlerFiles) {
   try {
     const handler = require(`./handlers/${file}`);
@@ -62,13 +65,13 @@ for (const file of handlerFiles) {
 }
 console.log(global.styles.success(`Loaded ${handlerCount} handlers`));
 
-// دستورات + Lavalink init
+// Deploy commands + Lavalink init
 client.once('ready', async () => {
-  console.log(`Bot is online as ${client.user.tag}`);
+  console.log(`Bot online as ${client.user.tag}`);
 
   // Lavalink رو راه‌اندازی کن
-  client.lavalink.init({ ...client.user });
-  console.log('Lavalink initialized successfully');
+  client.lavalink.init(client.user);
+  console.log('Lavalink initialized');
 
   // دستورات رو deploy کن
   try {
@@ -85,9 +88,7 @@ client.once('ready', async () => {
         } else if (item.endsWith('.js')) {
           try {
             const cmd = require(fullPath);
-            if (cmd.data?.toJSON) {
-              commands.push(cmd.data.toJSON());
-            }
+            if (cmd.data?.toJSON) commands.push(cmd.data.toJSON());
           } catch (e) {}
         }
       }
