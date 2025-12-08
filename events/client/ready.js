@@ -13,7 +13,7 @@ module.exports = {
       const total = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
       client.user.setActivity(`${total.toLocaleString()} In Nasl-1`, {
         type: ActivityType.Streaming,
-        url: "https://twitch.tv/nasl1"
+        url: "https://discord.gg/SFg3c43M"
       });
     };
     update();
