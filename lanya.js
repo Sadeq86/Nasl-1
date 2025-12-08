@@ -1,11 +1,11 @@
-// lanya.js — FINAL 100% WORKING (Lavalink + Music + Everything!)
+// lanya.js — FINAL 100% WORKING & CLEAN (2025)
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
 app.listen(10000, () => console.log('Express server running on http://localhost:10000'));
 
 require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 const { LavalinkManager } = require('lavalink-client');
 const fs = require('fs');
 const path = require('path');
@@ -21,7 +21,7 @@ const client = new Client({
   ],
 });
 
-// Lavalink درست راه‌اندازی شد
+// Lavalink setup
 client.lavalink = new LavalinkManager({
   nodes: [
     {
@@ -48,7 +48,7 @@ global.styles = {
   error: chalk.red,
 };
 
-// Load handlers
+// Load handlers safely
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
 for (const file of handlerFiles) {
@@ -64,15 +64,30 @@ for (const file of handlerFiles) {
 }
 console.log(global.styles.success(`Loaded ${handlerCount} handlers`));
 
-// همه چیز بعد از ready
+// Everything after ready
 client.once('ready', async () => {
   console.log(`Bot online as ${client.user.tag}`);
 
-  // Lavalink رو درست راه‌اندازی کن
+  // Lavalink init
   client.lavalink.init({ id: client.user.id });
   console.log('Lavalink connected and ready!');
 
-  // دستورات رو deploy کن
+  // Status with member count + Watch button
+  const updateStatus = () => {
+    const totalMembers = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
+    client.user.setPresence({
+      activities: [{
+        name: `${totalMembers.toLocaleString()} In Nasl-1`,
+        type: ActivityType.Streaming,
+        url: "https://discord.gg/8QH5N4B8" // می‌تونی هر لینکی بذاری
+      }],
+      status: 'idle'
+    });
+  };
+  updateStatus();
+  setInterval(updateStatus, 60000); // هر دقیقه آپدیت شه
+
+  // Deploy commands
   try {
     console.log('Deploying commands...');
     const commands = [];
@@ -87,8 +102,12 @@ client.once('ready', async () => {
         } else if (item.endsWith('.js')) {
           try {
             const cmd = require(fullPath);
-            if (cmd.data?.toJSON) commands.push(cmd.data.toJSON());
-          } catch (e) {}
+            if (cmd.data?.toJSON) {
+              commands.push(cmd.data.toJSON());
+            }
+          } catch (e) {
+            console.warn(`Broken command: ${item}`);
+          }
         }
       }
     };
@@ -97,6 +116,8 @@ client.once('ready', async () => {
       load(commandsPath);
       await client.application.commands.set(commands);
       console.log(`Deployed ${commands.length} commands`);
+    } else {
+      console.log('commands folder not found');
     }
   } catch (error) {
     console.error('Deploy failed:', error.message);
