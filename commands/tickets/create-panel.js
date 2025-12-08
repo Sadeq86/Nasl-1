@@ -111,7 +111,7 @@ module.exports = {
         .setDescription(descriptionMessage.content)
         .setColor(color)
         .setTimestamp()
-        .setFooter({ text: 'Nasl 1 Ticket System' });
+        .setFooter({ text: 'Nasl-1 System' });
 
       let components = [];
 
