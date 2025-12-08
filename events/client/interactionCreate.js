@@ -32,7 +32,7 @@ module.exports = {
     } catch (error) {
       console.error('Command execution failed:', error);
 
-      const content = { content: 'خطایی رخ داد!', ephemeral: true };
+      const content = { content: 'There Is A Problem.', ephemeral: true };
 
       // اگه هنوز جواب نداده باشیم
       if (!interaction.replied && !interaction.deferred) {
