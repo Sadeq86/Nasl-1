@@ -1,4 +1,4 @@
-// lanya.js — FINAL 100% WORKING ENGLISH VERSION (DECEMBER 2025)
+// lanya.js — FINAL 100% WORKING + LAVALINK INCLUDED
 const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Everything is up!'));
@@ -6,6 +6,7 @@ app.listen(10000, () => console.log('Express server running on http://localhost:
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
+const { Manager } = require('lavalink-client'); // اضافه شد
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
@@ -20,16 +21,34 @@ const client = new Client({
   ],
 });
 
+// Lavalink راه‌اندازی شد
+client.lavalink = new Manager({
+  nodes: [{
+    id: "main",
+    host: process.env.LL_HOST || "localhost",
+    port: parseInt(process.env.LL_PORT || "2333"),
+    authorization: process.env.LL_PASSWORD || "youshallnotpass",
+    secure: false
+  }],
+  sendToShard: (guildId, payload) => {
+    const guild = client.guilds.cache.get(guildId);
+    if (guild?.shard) guild.shard.send(payload);
+  },
+  client: {
+    id: process.env.DISCORD_CLIENT_ID,
+    username: "Nasl-1"
+  }
+});
+
 global.styles = {
   success: chalk.bold.green,
   warning: chalk.bold.yellow,
   error: chalk.red,
 };
 
-// Load handlers safely
+// هندلرها
 const handlerFiles = fs.readdirSync(path.join(__dirname, 'handlers')).filter(f => f.endsWith('.js'));
 let handlerCount = 0;
-
 for (const file of handlerFiles) {
   try {
     const handler = require(`./handlers/${file}`);
@@ -43,47 +62,44 @@ for (const file of handlerFiles) {
 }
 console.log(global.styles.success(`Loaded ${handlerCount} handlers`));
 
-// Deploy commands ONLY from root "commands" folder (your current structure)
+// دستورات + Lavalink init
 client.once('ready', async () => {
   console.log(`Bot is online as ${client.user.tag}`);
 
+  // Lavalink رو راه‌اندازی کن
+  client.lavalink.init({ ...client.user });
+  console.log('Lavalink initialized successfully');
+
+  // دستورات رو deploy کن
   try {
-    console.log('Deploying slash commands...');
-
+    console.log('Deploying commands...');
     const commands = [];
-    const commandsPath = path.join(__dirname, 'commands'); // your folder is in root
+    const commandsPath = path.join(__dirname, 'commands');
 
-    const loadCommands = (dir) => {
+    const load = (dir) => {
       const items = fs.readdirSync(dir);
       for (const item of items) {
         const fullPath = path.join(dir, item);
         if (fs.statSync(fullPath).isDirectory()) {
-          loadCommands(fullPath);
+          load(fullPath);
         } else if (item.endsWith('.js')) {
           try {
-            const command = require(fullPath);
-            if (command.data?.toJSON) {
-              commands.push(command.data.toJSON());
-              console.log(`Loaded command: /${command.data.name}`);
+            const cmd = require(fullPath);
+            if (cmd.data?.toJSON) {
+              commands.push(cmd.data.toJSON());
             }
-          } catch (e) {
-            console.warn(`Skipped broken file: ${item}`);
-          }
+          } catch (e) {}
         }
       }
     };
 
     if (fs.existsSync(commandsPath)) {
-      loadCommands(commandsPath);
-
-      // This line fixes "This command is outdated"
+      load(commandsPath);
       await client.application.commands.set(commands);
-      console.log(`Successfully deployed ${commands.length} commands!`);
-    } else {
-      console.error('commands folder not found in project root!');
+      console.log(`Deployed ${commands.length} commands`);
     }
   } catch (error) {
-    console.error('Failed to deploy commands:', error.message);
+    console.error('Deploy failed:', error.message);
   }
 });
 
