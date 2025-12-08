@@ -1,6 +1,5 @@
 const { Events, ActivityType } = require('discord.js');
 const startGiveawayScheduler = require('../../functions/giveawayScheduler');
-const serverStatusUpdater = require('../../functions/serverStatusUpdater');
 const updateStatus = require('../../functions/statusRotation');
 const fs = require('fs');
 const path = require('path');
