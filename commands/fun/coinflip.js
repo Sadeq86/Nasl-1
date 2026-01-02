@@ -1,27 +1,52 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  EmbedBuilder,
+} = require('discord.js');
+
+const STAFF_ROLE_ID = '1411083330773848194';
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('start')
-    .setDescription('Spin a wheel and see the result.'),
+    .setName('result')
+    .setDescription('Send a result message (staff only)'),
 
   async execute(interaction) {
-    const result = Math.random() < 0.5 ? '🎰 Random' : '🫳 Picking';
+    // Check if user has the required role
+    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+      return interaction.reply({
+        content: 'You do not have permission to use this command.',
+        ephemeral: true,
+      });
+    }
 
-    const embed = new EmbedBuilder()
-      .setColor(0x5865f2)
-      .setTitle('🎲 Picker Wheel')
-      .setDescription(`You spin the wheel.`)
-      .addFields(
-        { name: 'Result', value: result, inline: true },
-        {
-          name: 'Requested by',
-          value: `${interaction.user.tag}`,
-          inline: true,
-        }
-      )
-      .setTimestamp();
+    // Create the modal
+    const modal = new ModalBuilder()
+      .setCustomId('result_modal')
+      .setTitle('Send Result Message');
 
-    await interaction.reply({ embeds: [embed] });
+    const messageInput = new TextInputBuilder()
+      .setCustomId('message_input')
+      .setLabel('Message Content')
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true);
+
+    const typeInput = new TextInputBuilder()
+      .setCustomId('type_input')
+      .setLabel('Send as Embed? (yes/no)')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('Type "yes" for embed, anything else for normal text')
+      .setRequired(true);
+
+    const firstRow = new ActionRowBuilder().addComponents(messageInput);
+    const secondRow = new ActionRowBuilder().addComponents(typeInput);
+
+    modal.addComponents(firstRow, secondRow);
+
+    // Show the modal
+    await interaction.showModal(modal);
   },
 };
