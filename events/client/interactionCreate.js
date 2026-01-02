@@ -49,3 +49,43 @@ module.exports = {
     }
   }
 };
+// result
+client.on('interactionCreate', async (interaction) => {
+  if (interaction.isChatInputCommand()) {
+    // Your existing command handling...
+  }
+
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId === 'result_modal') {
+      // Optional: re-check role (for safety)
+      if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+        return interaction.reply({
+          content: 'You no longer have permission to use this.',
+          ephemeral: true,
+        });
+      }
+
+      const messageContent = interaction.fields.getTextInputValue('message_input');
+      const typeChoice = interaction.fields.getTextInputValue('type_input').trim().toLowerCase();
+
+      if (typeChoice === 'yes') {
+        // Send as embed
+        const embed = new EmbedBuilder()
+          .setDescription(messageContent)
+          .setColor('#0099ff') // You can change the color
+          .setTimestamp();
+
+        await interaction.channel.send({ embeds: [embed] });
+      } else {
+        // Send as normal text
+        await interaction.channel.send(messageContent);
+      }
+
+      // Confirm to the staff member
+      await interaction.reply({
+        content: 'Message sent successfully!',
+        ephemeral: true,
+      });
+    }
+  }
+});
