@@ -1,124 +1,86 @@
-// commands/admin/giveaway.js — FINAL 100% WORKING (NO MORE INTERACTION ERRORS)
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const startGiveaway = require('../../functions/startGiveaway');
-const endGiveaway = require('../../functions/endGiveaway');
-const rerollGiveaway = require('../../functions/rerollGiveaway');
-const listGiveaways = require('../../functions/listGiveaway');
-const cancelGiveaway = require('../../functions/cancelGiveaway');
+// commands/giveaway/giveaway-start.js
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const ms = require('ms');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('giveaway')
-    .setDescription('Manage giveaways')
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('start')
-        .setDescription('Start a new giveaway')
-        .addStringOption((option) =>
-          option
-            .setName('duration')
-            .setDescription('The duration of the giveaway (e.g., 1d1h1m1s)')
-            .setRequired(true)
-        )
-        .addStringOption((option) =>
-          option
-            .setName('prize')
-            .setDescription('The prize of the giveaway')
-            .setRequired(true)
-        )
-        .addIntegerOption((option) =>
-          option
-            .setName('winners')
-            .setDescription('Number of winners for the giveaway')
-            .setRequired(true)
-        )
-        .addRoleOption((option) =>
-          option
-            .setName('required_role')
-            .setDescription('Optional: Role required to join the giveaway')
-        )
-        .addChannelOption((option) =>
-          option
-            .setName('channel')
-            .setDescription('Optional: Channel to host the giveaway.')
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('reroll')
-        .setDescription('Reroll the giveaway to select new winners')
-        .addStringOption((option) =>
-          option
-            .setName('message_id')
-            .setDescription('The message ID of the giveaway')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('end')
-        .setDescription('End an ongoing giveaway')
-        .addStringOption((option) =>
-          option
-            .setName('message_id')
-            .setDescription('The message ID of the giveaway')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('cancel')
-        .setDescription('Cancel an ongoing giveaway')
-        .addStringOption((option) =>
-          option
-            .setName('message_id')
-            .setDescription('The message ID of the giveaway')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('list')
-        .setDescription('List all ongoing giveaways in the server')
-    ),
+    .setName('giveaway-start')
+    .setDescription('Start a new giveaway')
+    .addStringOption(option =>
+      option.setName('duration')
+        .setDescription('Giveaway duration (e.g. 1h, 30m, 1d)')
+        .setRequired(true))
+    .addIntegerOption(option =>
+      option.setName('winners')
+        .setDescription('Number of winners')
+        .setRequired(true)
+        .setMinValue(1))
+    .addStringOption(option =>
+      option.setName('prize')
+        .setDescription('The prize')
+        .setRequired(true))
+    .addChannelOption(option =>
+      option.setName('channel')
+        .setDescription('Channel to send the giveaway (default: current channel)')
+        .setRequired(false)),
 
   async execute(interaction) {
-    // چک ادمین
-    if (!interaction.member.permissions.has('Administrator')) {
-      return interaction.reply({
-        content: 'You do not have `Administrator` permission to manage giveaways!',
-        ephemeral: true,
-      });
-    }
+    await interaction.deferReply({ ephemeral: true });
 
-    // خیلی مهم: اول defer کن تا ارور Unknown interaction نده
-    await interaction.deferReply();
+    const duration = interaction.options.getString('duration');
+    const winners = interaction.options.getInteger('winners');
+    const prize = interaction.options.getString('prize');
+    const channel = interaction.options.getChannel('channel') || interaction.channel;
 
-    const subcommand = interaction.options.getSubcommand();
+    const endTime = Date.now() + ms(duration);
 
-    try {
-      switch (subcommand) {
-        case 'start':
-          await startGiveaway(interaction);
-          break;
-        case 'reroll':
-          await rerollGiveaway(interaction);
-          break;
-        case 'end':
-          await endGiveaway(interaction);
-          break;
-        case 'cancel':
-          await cancelGiveaway(interaction);
-          break;
-        case 'list':
-          await listGiveaways(interaction);
-          break;
-        default:
-          await interaction.editReply({ content: 'Invalid subcommand!' });
-      }
-    } catch (error) {
-      console.error('Giveaway command error:', error);
-      await interaction.editReply({ content: 'An error occurred while processing the giveaway!' }).catch(() => {});
-    }
-  },
+    const embed = new EmbedBuilder()
+      .setColor('#00ff00')
+      .setTitle(`🎉 ${prize} Nasl-1 Giveaway`)
+      .addFields(
+        { name: '🏆 Winners', value: `${winners}`, inline: true },
+        { name: '🎁 Prize', value: prize, inline: true },
+        { name: '👥 Entries', value: '0', inline: true },
+        { name: '⏰ Status', value: '🟢 Running', inline: true },
+        { name: '🎮 Host', value: `${interaction.user}`, inline: true },
+        { name: '⏰ Ends', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: true }
+      )
+      .setFooter({ text: '🎉 Nasl-1 Giveaway System' })
+      .setTimestamp();
+
+    const button = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('giveaway_enter')
+        .setLabel('Enter Giveaway')
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('🎉')
+    );
+
+    const message = await channel.send({
+      content: '🎉 **NEW GIVEAWAY!** 🎉',
+      embeds: [embed],
+      components: [button]
+    });
+
+    await interaction.editReply({ content: `Giveaway started in ${channel}!` });
+
+    // Save giveaway data (you can use a DB or simple Map)
+    const giveaway = {
+      messageId: message.id,
+      channelId: channel.id,
+      guildId: interaction.guild.id,
+      endTime,
+      prize,
+      winners,
+      entered: [],
+      ended: false
+    };
+
+    // Store in client (for simple use)
+    if (!interaction.client.giveaways) interaction.client.giveaways = [];
+    interaction.client.giveaways.push(giveaway);
+
+    // Set timeout to end giveaway
+    setTimeout(() => endGiveaway(interaction.client, giveaway), ms(duration));
+  }
 };
