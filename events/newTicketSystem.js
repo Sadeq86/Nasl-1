@@ -74,7 +74,7 @@ module.exports = {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`ticket_close_${type}_${user.id}`).setLabel('Close').setEmoji('🔒').setStyle(ButtonStyle.Danger),
         new ButtonBuilder().setCustomId(`ticket_reopen_${type}_${user.id}`).setLabel('Reopen').setEmoji('🔓').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`ticket_claim_${type}`).setLabel('Claim').setEmoji('🙋‍♂️').setStyle(ButtonStyle.Warning),
+        new ButtonBuilder().setCustomId(`ticket_claim_${type}`).setLabel('Claim').setEmoji('🙋‍♂️').setStyle(ButtonStyle.link),
         new ButtonBuilder().setCustomId(`ticket_transcript_${user.id}`).setLabel('Transcript').setEmoji('📑').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId(`ticket_delete`).setLabel('Delete').setEmoji('⛔').setStyle(ButtonStyle.Secondary)
       );
