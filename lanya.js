@@ -1,6 +1,5 @@
 // lanya.js — FINAL 100% ONLINE — NO MORE READY.JS NEEDED
 const express = require('express');
-const keep_alive = require('./keep_alive.js')
 const app = express();
 app.get('/', (req, res) => res.send('Nasl-1 is alive!'));
 const PORT = 5000;
